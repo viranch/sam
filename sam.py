@@ -8,6 +8,7 @@ import os
 import Cyberoam
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
+from Crypto.Cipher import AES
 
 class UpdateQuota (QThread):
 
@@ -135,6 +136,11 @@ class MainWindow (QMainWindow):
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', 'Ctrl+Q') )
 		
+		key = 'qwertyashhjgoreiuqhwlv32184!!@3$'
+		mode = AES.MODE_CBC
+		self.encryptor = AES.new(key,mode)
+		self.decryptor = AES.new(key,mode)
+		
 
 		self.table = QTreeWidget ()
 		self.table.setRootIsDecorated (False)
@@ -149,11 +155,26 @@ class MainWindow (QMainWindow):
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
-			accounts = conf.read().split('\n')
+			print "hellofasdfsa"
+			accounts = conf.read()
 			conf.close()
-			for ac in accounts:
-				toks = ac.split('\t')
-				self.addAccount ( toks[0], toks[1] )
+			###print accounts
+			toks = accounts.split('\n\n\n',1)
+			length = int(toks[0])
+			print length
+			data = toks[1].split('!@#$%^&*')
+			i=0
+			while i!= 2*length:
+				user = data[i]
+				
+				crypt_passwd = data[i+1]
+				passwd = self.decryptor.decrypt(crypt_passwd)
+				index = len(passwd)/16
+				
+				passwd = passwd[0:index]
+				
+				self.addAccount(user,passwd)
+				i = i+2
 		except: pass
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.setRedIcon )
@@ -236,8 +257,15 @@ class MainWindow (QMainWindow):
 
 	def quit (self):
 		conf = open ( os.getenv('HOME')+'/.sam.conf', 'w' )
+		length = str(len(self.accounts))
+		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
-			conf.write ( ac.username+'\t'+ac.passwd+'\n' )
+			print 'main'
+			temp = ac.passwd*16
+			ciphertext = self.encryptor.encrypt(temp)
+			temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
+			conf.write(temp)
+		
 		conf.close()
 		self.loginThread.exit()
 		self.close()
