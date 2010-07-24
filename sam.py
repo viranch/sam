@@ -57,18 +57,15 @@ class StayLogin (QThread):
 				if not self.parent.quotaThread.isRunning():
 					self.parent.quotaThread.start()
 				self.parent.quotaThread.update(True)
-				this.setIcon (0, QIcon('icons/flag-green.png'))
 				this.setText (1, 'Logged in')
 				time.sleep (3000)
 			except Cyberoam.DataTransferLimitExceeded:
 				quota = Cyberoam.netUsage ( self.parent.accounts[self.curr].username+'@da-iict.org', self.parent.accounts[self.curr].passwd )
-				this.setIcon (0, QIcon('icons/flag-red.png'))
 				this.setText (1, 'Limit Reached')
 				this.setText (2, quota[0])
 				this.setText (3, quota[1])
 				self.curr+=1
 			except Cyberoam.WrongPassword:
-				this.setIcon (0, QIcon('icons/flag-red.png'))
 				this.setText (1, 'Wrong Password')
 				self.curr+=1
 		self.parent.quotaThread.exit()
@@ -136,7 +133,7 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( self.createAction ('Down', self.down, 'icons/go-down.png', 'Move down') )
 		self.toolbar.addAction ( self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom') )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit CAM', 'Ctrl+Q') )
+		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', 'Ctrl+Q') )
 		
 
 		self.table = QTreeWidget ()
@@ -148,17 +145,28 @@ class MainWindow (QMainWindow):
 		headers.setText (3, 'Remaining')
 
 		self.setCentralWidget (self.table)
-		self.setWindowTitle ('Cyberoam Account Manager')
+		self.setWindowTitle ('Syberoam Account Manager')
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
-			accounts = conf.read()
-			accounts = accounts.split('\n')
+			accounts = conf.read().split('\n')
 			conf.close()
 			for ac in accounts:
 				toks = ac.split('\t')
 				self.addAccount ( toks[0], toks[1] )
 		except: pass
+		
+		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.setRedIcon )
+
+	def setRedIcon (self, item, column):
+		if column==1:
+			status = str(item.text(1))
+			if status == 'Logged in':
+				item.setIcon (0, QIcon('icons/flag-green.png'))
+			elif status == 'Logged out':
+				item.setIcon (0, QIcon('icons/flag-yellow.png'))
+			elif status == 'Limit Reached' or status == 'Wrong Password':
+				item.setIcon (0, QIcon('icons/flag-red.png'))
 
 	def login (self):
 		if self.loginThread.isRunning():
@@ -171,7 +179,9 @@ class MainWindow (QMainWindow):
 
 	def addAccount (self, uid=None, pwd=None):
 		if uid is not None and pwd is not None:
-			self.table.addTopLevelItem ( QTreeWidgetItem([uid, '', '', '']) )
+			new = QTreeWidgetItem([uid, '', '', ''])
+			new.setIcon (0, QIcon('icons/flag-yellow.png'))
+			self.table.addTopLevelItem ( new )
 			self.accounts.append ( Account(uid, pwd) )
 		else:
 			dlg = Prompt()
