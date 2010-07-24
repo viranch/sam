@@ -8,7 +8,7 @@ import os
 import Cyberoam
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-from Crypto.Cipher import AES
+import bz2
 
 class UpdateQuota (QThread):
 
@@ -136,10 +136,6 @@ class MainWindow (QMainWindow):
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', 'Ctrl+Q') )
 		
-		key = 'qwertyashhjgoreiuqhwlv32184!!@3$'
-		mode = AES.MODE_CBC
-		self.encryptor = AES.new(key,mode)
-		self.decryptor = AES.new(key,mode)
 		
 
 		self.table = QTreeWidget ()
@@ -168,8 +164,8 @@ class MainWindow (QMainWindow):
 				user = data[i]
 				
 				crypt_passwd = data[i+1]
-				passwd = self.decryptor.decrypt(crypt_passwd)
-				index = len(passwd)/16
+				passwd = bz2.decompress(crypt_passwd)
+				index = len(passwd)
 				
 				passwd = passwd[0:index]
 				
@@ -261,8 +257,8 @@ class MainWindow (QMainWindow):
 		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
 			print 'main'
-			temp = ac.passwd*16
-			ciphertext = self.encryptor.encrypt(temp)
+			temp = ac.passwd
+			ciphertext = bz2.compress(temp)
 			temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
 			conf.write(temp)
 		
