@@ -68,16 +68,48 @@ class StayLogin (QThread):
 				this.setText (3, quota[1])
 				self.curr+=1
 			except Cyberoam.WrongPassword:
-				this.setIcon (0, 'icons/flag-red.png')
+				this.setIcon (0, QIcon('icons/flag-red.png'))
 				this.setText (1, 'Wrong Password')
 				self.curr+=1
 		self.parent.quotaThread.exit()
 
 class Account ():
 
-	def __init__ (self, login_id, passwd):
+	def __init__ (self, login_id='', passwd=''):
 		self.username = login_id
 		self.passwd = passwd
+
+class Prompt (QDialog):
+	def __init__(self, parent=None):
+		super (Prompt, self).__init__(parent)
+		self.acc = Account()
+		
+		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+		unameLabel = QLabel ('Username:')
+		pwdLabel = QLabel ('Password:')
+		self.unameEdit = QLineEdit()
+		self.pwdEdit = QLineEdit()
+		self.pwdEdit.setEchoMode (QLineEdit.Password)
+
+		grid = QGridLayout ()
+		grid.addWidget (unameLabel, 0, 0)
+		grid.addWidget (self.unameEdit, 0, 1)
+		grid.addWidget (pwdLabel, 1, 0)
+		grid.addWidget (self.pwdEdit, 1, 1)
+		grid.addWidget (self.buttonBox, 2, 0, 1, 2)
+		self.setLayout (grid)
+		self.setWindowTitle ('Add Account')
+
+		self.connect (self.buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
+		self.connect (self.buttonBox, SIGNAL("rejected()"), self, SLOT('reject()'))
+		self.connect (self.unameEdit, SIGNAL("editingFinished()"), self.showUser)
+		self.connect (self.pwdEdit, SIGNAL("editingFinished()"), self.showPass)
+
+	def showPass(self):
+		self.acc.passwd = str(self.pwdEdit.text())
+	
+	def showUser(self):
+		self.acc.username = str(self.unameEdit.text())
 
 class MainWindow (QMainWindow):
 
@@ -105,6 +137,7 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom') )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit CAM', 'Ctrl+Q') )
+		
 
 		self.table = QTreeWidget ()
 		self.table.setRootIsDecorated (False)
@@ -119,7 +152,8 @@ class MainWindow (QMainWindow):
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
-			accounts = conf.readlines()
+			accounts = conf.read()
+			accounts = accounts.split('\n')
 			conf.close()
 			for ac in accounts:
 				toks = ac.split('\t')
@@ -140,12 +174,9 @@ class MainWindow (QMainWindow):
 			self.table.addTopLevelItem ( QTreeWidgetItem([uid, '', '', '']) )
 			self.accounts.append ( Account(uid, pwd) )
 		else:
-			new=QTreeWidgetItem(['200601049', '', '', ''])
-			self.accounts.append ( Account('200601049', 'a') )
-			self.table.addTopLevelItem (new)
-			new=QTreeWidgetItem(['200801035', '', '', ''])
-			self.accounts.append ( Account('200801035', 'poison007') )
-			self.table.addTopLevelItem (new)
+			dlg = Prompt()
+			if dlg.exec_():
+				self.addAccount(dlg.acc.username, dlg.acc.passwd)
 
 	def rmAccount (self):
 		if len(self.accounts) == 0:
