@@ -10,6 +10,8 @@ from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import bz2
 
+DOMAIN = '@da-iict.org'
+
 class UpdateQuota (QThread):
 
 	def __init__(self, parent=None):
@@ -78,25 +80,31 @@ class Account ():
 		self.passwd = passwd
 
 class Prompt (QDialog):
-	def __init__(self, parent=None):
+	def __init__(self, acc=None, parent=None):
 		super (Prompt, self).__init__(parent)
-		self.acc = Account()
+		self.acc = Account() if acc is None else acc
 		
 		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 		unameLabel = QLabel ('Username:')
+		suffLabel = QLabel (DOMAIN)
 		pwdLabel = QLabel ('Password:')
 		self.unameEdit = QLineEdit()
+		if acc is not None:
+			self.unameEdit.setText ( acc.username )
+			self.unameEdit.selectAll()
 		self.pwdEdit = QLineEdit()
 		self.pwdEdit.setEchoMode (QLineEdit.Password)
 
 		grid = QGridLayout ()
 		grid.addWidget (unameLabel, 0, 0)
 		grid.addWidget (self.unameEdit, 0, 1)
+		grid.addWidget (suffLabel, 0, 2)
 		grid.addWidget (pwdLabel, 1, 0)
-		grid.addWidget (self.pwdEdit, 1, 1)
-		grid.addWidget (self.buttonBox, 2, 0, 1, 2)
+		grid.addWidget (self.pwdEdit, 1, 1, 1, 2)
+		grid.addWidget (self.buttonBox, 2, 0, 1, 3)
 		self.setLayout (grid)
-		self.setWindowTitle ('Add Account')
+		title = 'Add User' if acc is None else 'Edit User'
+		self.setWindowTitle (title)
 
 		self.connect (self.buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
 		self.connect (self.buttonBox, SIGNAL("rejected()"), self, SLOT('reject()'))
@@ -122,11 +130,12 @@ class MainWindow (QMainWindow):
 		self.status = self.statusBar()
 		self.status.setSizeGripEnabled (False)
 
-		self.toolbar.addAction ( self.createAction ('Log In', self.login, None, 'Log In') )
+		self.toolbar.addAction ( self.createAction ('Log In', self.login, 'icons/network-connect.png', 'Log In') )
 		self.toolbar.addAction ( self.createAction ('Refresh', self.refreshQuota, 'icons/view-refresh.png', 'Refresh Quota', 'F5') )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( self.createAction ('Add', self.addAccount, 'icons/list-add.png', 'Add account') )
-		self.toolbar.addAction ( self.createAction ('Remove', self.rmAccount, 'icons/list-remove.png', 'Remove account') )
+		self.toolbar.addAction ( self.createAction ('Add', self.addAccount, 'icons/list-add-user.png', 'Add User') )
+		self.toolbar.addAction ( self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User') )
+		self.toolbar.addAction ( self.createAction ('Edit', self.editAccount, 'icons/user-properties.png', 'Edit User') )
 		self.toolbar.addAction ( self.createAction ('Clear', self.clearList, 'icons/edit-clear-list.png', 'Clear account list') )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( self.createAction ('Top', self.top, 'icons/go-top.png', 'Move to top') )
@@ -135,8 +144,6 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom') )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', 'Ctrl+Q') )
-		
-		
 
 		self.table = QTreeWidget ()
 		self.table.setRootIsDecorated (False)
@@ -147,33 +154,33 @@ class MainWindow (QMainWindow):
 		headers.setText (3, 'Remaining')
 
 		self.setCentralWidget (self.table)
+		self.setWindowIcon (QIcon('icons/cyberoam.png'))
 		self.setWindowTitle ('Syberoam Account Manager')
+		self.tray = QSystemTrayIcon ()
+		self.tray.setIcon ( QIcon('icons/cyberoam.png') )
+		self.tray.show()
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
-			print "hellofasdfsa"
 			accounts = conf.read()
 			conf.close()
 			###print accounts
 			toks = accounts.split('\n\n\n',1)
 			length = int(toks[0])
-			print length
 			data = toks[1].split('!@#$%^&*')
 			i=0
 			while i!= 2*length:
 				user = data[i]
-				
 				crypt_passwd = data[i+1]
 				passwd = bz2.decompress(crypt_passwd)
 				index = len(passwd)
-				
 				passwd = passwd[0:index]
-				
 				self.addAccount(user,passwd)
 				i = i+2
 		except: pass
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.setRedIcon )
+		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
 
 	def setRedIcon (self, item, column):
 		if column==1:
@@ -200,10 +207,22 @@ class MainWindow (QMainWindow):
 			new.setIcon (0, QIcon('icons/flag-yellow.png'))
 			self.table.addTopLevelItem ( new )
 			self.accounts.append ( Account(uid, pwd) )
+			self.status.showMessage (uid+' added', 5000)
 		else:
-			dlg = Prompt()
+			dlg = Prompt(None, self)
+			dlg.setWindowIcon (QIcon('icons/list-add-user.png'))
 			if dlg.exec_():
 				self.addAccount(dlg.acc.username, dlg.acc.passwd)
+
+	def editAccount (self):
+		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
+		dlg = Prompt(self.accounts[current])
+		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
+		if dlg.exec_():
+			self.accounts[current].username = dlg.acc.username
+			if dlg.acc.passwd is not '':
+				self.accounts[current].passwd = dlg.acc.passwd
+			self.table.currentItem().setText (0, dlg.acc.username)
 
 	def rmAccount (self):
 		if len(self.accounts) == 0:
@@ -256,7 +275,6 @@ class MainWindow (QMainWindow):
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
-			print 'main'
 			temp = ac.passwd
 			ciphertext = bz2.compress(temp)
 			temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
