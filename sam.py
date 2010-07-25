@@ -112,7 +112,8 @@ class Prompt (QDialog):
 		self.connect (self.pwdEdit, SIGNAL("editingFinished()"), self.showPass)
 
 	def showPass(self):
-		self.acc.passwd = str(self.pwdEdit.text())
+		if str(self.pwdEdit.text()) is not '':
+			self.acc.passwd = str(self.pwdEdit.text())
 	
 	def showUser(self):
 		self.acc.username = str(self.unameEdit.text())
@@ -220,8 +221,6 @@ class MainWindow (QMainWindow):
 		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
 		if dlg.exec_():
 			self.accounts[current].username = dlg.acc.username
-			if dlg.acc.passwd is not '':
-				self.accounts[current].passwd = dlg.acc.passwd
 			self.table.currentItem().setText (0, dlg.acc.username)
 
 	def rmAccount (self):
