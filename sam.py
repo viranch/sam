@@ -161,7 +161,7 @@ class MainWindow (QMainWindow):
 		self.switch = False
 
 		self.toolbar = self.addToolBar ('Toolbar')
-		self.toolbar.setIconSize (QSize(32,32))
+		self.toolbar.setIconSize (QSize(30,30))
 		self.status = self.statusBar()
 		self.status.setSizeGripEnabled (False)
 
