@@ -1,0 +1,8 @@
+TODO List:
+
+1. Progress Bars disappear after shuffling(top/up/down/bottom) of list.
+
+2. Reimplement threads with QTimer()s
+
+3. Include more options in Settings.
+

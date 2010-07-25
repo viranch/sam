@@ -15,9 +15,13 @@ DOMAIN = '@da-iict.org'
 GREEN = 'icons/ball-green.png'
 RED = 'icons/ball-red.png'
 YELLOW = 'icons/ball-yellow.png'
-update_quota_after = 900 #seconds = 15 mins
-relogin_after = 3000 #seconds = 50 mins
-critical_quota_limit = 95.0 #MB
+
+class Config ():
+
+	def __init__ (self):
+		self.update_quota_after = 900 #seconds = 15 mins
+		self.relogin_after = 3000 #seconds = 50 mins
+		self.critical_quota_limit = 95.0 #MB
 
 class UpdateQuota (QThread):
 
@@ -46,10 +50,10 @@ class UpdateQuota (QThread):
 				used=quota[0].split()
 				if used[1]=='MB' and float(used[0])>=critical_quota_limit:
 					self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
-					self.parent.login (acc_no+1)
+					self.parent.login (self.parent.table.topLevelItem(acc_no+1))
 			if once:
 				break
-			self.sleep (update_quota_after)
+			self.sleep (self.parent.settings.update_quota_after)
 
 	def sleep (self, sec):
 		i = 0
@@ -68,6 +72,7 @@ class StayLogin (QThread):
 		self.doNow = False
 
 	def run (self):
+		self.parent.quotaThread.kill = False
 		if self.curr<0:
 			return None
 		while self.curr<len(self.parent.accounts) and not self.kill:
@@ -83,7 +88,7 @@ class StayLogin (QThread):
 				else:
 					self.parent.quotaThread.doNow = True
 				this.setText (1, 'Logged in')
-				self.sleep (relogin_after)
+				self.sleep (self.parent.settings.relogin_after)
 			except Cyberoam.DataTransferLimitExceeded:
 				self.parent.quotaThread.run (self.curr)
 				this.setText (1, 'Limit Reached')
@@ -112,17 +117,18 @@ class Account ():
 		self.passwd = passwd
 
 class Prompt (QDialog):
-	def __init__(self, acc=None, parent=None):
+
+	def __init__(self, parent=None, uid=None):
 		super (Prompt, self).__init__(parent)
-		self.acc = Account() if acc is None else acc
+		self.acc = Account()
 		
 		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 		unameLabel = QLabel ('Username:')
 		suffLabel = QLabel (DOMAIN)
 		pwdLabel = QLabel ('Password:')
 		self.unameEdit = QLineEdit()
-		if acc is not None:
-			self.unameEdit.setText ( acc.username )
+		if uid is not None:
+			self.unameEdit.setText ( uid )
 			self.unameEdit.selectAll()
 		self.pwdEdit = QLineEdit()
 		self.pwdEdit.setEchoMode (QLineEdit.Password)
@@ -135,7 +141,7 @@ class Prompt (QDialog):
 		grid.addWidget (self.pwdEdit, 1, 1, 1, 2)
 		grid.addWidget (self.buttonBox, 2, 0, 1, 3)
 		self.setLayout (grid)
-		title = 'Add User' if acc is None else 'Edit User'
+		title = 'Add User' if uid is None else 'Edit User'
 		self.setWindowTitle (title)
 
 		self.connect (self.buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
@@ -144,11 +150,44 @@ class Prompt (QDialog):
 		self.connect (self.pwdEdit, SIGNAL("editingFinished()"), self.showPass)
 
 	def showPass(self):
-		if str(self.pwdEdit.text()) is not '':
-			self.acc.passwd = str(self.pwdEdit.text())
+		self.acc.passwd = str(self.pwdEdit.text())
 	
 	def showUser(self):
 		self.acc.username = str(self.unameEdit.text())
+
+class SettingsDlg (QDialog):
+
+	def __init__(self, parent):
+		super (SettingsDlg, self).__init__(parent)
+		
+		self.setWindowTitle ('Preferences')
+		loginIntervalLabel = QLabel ('Login after every:')
+		loginSpin = QSpinBox ()
+		loginSpin.setRange (1, 60)
+		loginSpin.setValue (self.parent.settings.relogin_after/60)
+		minLabel = QLabel ('minutes')
+		quotaIntervalLabel = QLabel ('Refresh Quota usage every:')
+		quotaSpin = QSpinBox()
+		quotaSpin.setRange (1, 60)
+		quotaSpin.setValue (self.parent.settings.update_quota_after/60)
+		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
+		
+		hbox1 = QHBoxLayout()
+		hbox1.addWidget (loginIntervalLabel)
+		hbox1.addWidget (loginSpin)
+		hbox1.addWidget (minLabel)
+		hbox2 = QHBoxLayout()
+		hbox2.addWidget (quotaIntervalLabel)
+		hbox2.addWidget (quotaSpin)
+		hbox2.addWidget (minLabel)
+		vbox = QVBoxLayout()
+		vbox.addLayout (hbox1, 0, 0)
+		vbox.addLayout (hbox2, 2, 0)
+		vbox.addWidget (buttonbox, 5, 0)
+		self.setLayout (vbox)
+		
+		self.connect (buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
+		self.connect (buttonBox, SIGNAL("rejected()"), self, SLOT('reject()'))
 
 class MainWindow (QMainWindow):
 
@@ -158,28 +197,58 @@ class MainWindow (QMainWindow):
 		self.accounts = []
 		self.loginThread = StayLogin (self)
 		self.quotaThread = UpdateQuota (self)
+		self.settings = Config()
 		self.switch = False
+		self.bars = []
 
 		self.toolbar = self.addToolBar ('Toolbar')
-		self.toolbar.setIconSize (QSize(30,30))
 		self.status = self.statusBar()
 		self.status.setSizeGripEnabled (False)
 
-		self.toolbar.addAction ( self.createAction ('Log In', self.login, 'icons/network-connect.png', 'Log In') )
-		self.toolbar.addAction ( self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True) )
-		self.toolbar.addAction ( self.createAction ('Refresh', self.refreshQuota, 'icons/view-refresh.png', 'Refresh Quota', 'F5') )
+		loginAction = self.createAction ('Log In', self.login, 'icons/network-connect.png', 'Log In')
+		switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
+		quotaAction = self.createAction ('Get Quota Usage', self.refreshQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
+		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
+		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User', QKeySequence.Delete)
+		editUserAction = self.createAction ('&Edit...', self.editAccount, 'icons/user-properties.png', 'Edit User')
+		clearAction = self.createAction ('&Clear All', self.clearList, 'icons/edit-clear-list.png', 'Clear Users list')
+		topAction = self.createAction ('Top', self.top, 'icons/go-top.png', 'Move to top')
+		upAction = self.createAction ('Up', self.up, 'icons/go-up.png', 'Move up')
+		downAction = self.createAction ('Down', self.down, 'icons/go-down.png', 'Move down')
+		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
+		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/', 'Configure SAM', QKeySequence.Preferences)
+		quitAction = self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
+		
+		menubar = self.menuBar()
+		userMenu = menubar.addMenu ('&Users')
+		userMenu.addAction (newUserAction)
+		userMenu.addSeparator()
+		userMenu.addAction (editUserAction)
+		userMenu.addAction (rmUserAction)
+		userMenu.addAction (clearAction)
+		userMenu.addSeparator()
+		userMenu.addAction (quitAction)
+		actionsMenu = menubar.addMenu ('&Actions')
+		actionsMenu.addAction (loginAction)
+		actionsMenu.addAction (quotaAction)
+		actionsMenu.addAction (switchAction)
+		settingsMenu = menubar.addMenu ('&Settings')
+		settingsMenu.addAction (prefsAction)
+		
+		self.toolbar.addAction ( newUserAction )
+		self.toolbar.addAction ( rmUserAction )
+		self.toolbar.addAction ( editUserAction )
+		self.toolbar.addAction ( clearAction )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( self.createAction ('Add', self.addAccount, 'icons/list-add-user.png', 'Add User') )
-		self.toolbar.addAction ( self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User') )
-		self.toolbar.addAction ( self.createAction ('Edit', self.editAccount, 'icons/user-properties.png', 'Edit User') )
-		self.toolbar.addAction ( self.createAction ('Clear', self.clearList, 'icons/edit-clear-list.png', 'Clear account list') )
+		self.toolbar.addAction ( loginAction )
+		self.toolbar.addAction ( quotaAction )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( self.createAction ('Top', self.top, 'icons/go-top.png', 'Move to top') )
-		self.toolbar.addAction ( self.createAction ('Up', self.up, 'icons/go-up.png', 'Move up') )
-		self.toolbar.addAction ( self.createAction ('Down', self.down, 'icons/go-down.png', 'Move down') )
-		self.toolbar.addAction ( self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom') )
+		self.toolbar.addAction ( topAction )
+		self.toolbar.addAction ( upAction )
+		self.toolbar.addAction ( downAction )
+		self.toolbar.addAction ( bottomAction )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', 'Ctrl+Q') )
+		self.toolbar.addAction ( quitAction )
 
 		self.table = QTreeWidget ()
 		self.table.setRootIsDecorated (False)
@@ -219,6 +288,7 @@ class MainWindow (QMainWindow):
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
+		#self.connect ( self.table, SIGNAL('itemActivated(QTreeWidgetItem*,int)'), self.login )
 
 	def updateUi (self, item, column):
 		if column==1:
@@ -236,12 +306,17 @@ class MainWindow (QMainWindow):
 			used = int(round(used))
 			self.table.itemWidget (item, 2).setValue(used)
 
+	def configure (self):
+		dlg = SettingsDlg(self)
+
 	def setAutoSwitch (self):
 		self.switch = not self.switch
 
-	def login (self, acc_no=None):
-		if acc_no is None:
+	def login (self, item=None, column=None):
+		if item is None:
 			acc_no = self.table.indexOfTopLevelItem ( self.table.currentItem() )
+		else:
+			acc_no = self.table.indexOfTopLevelItem ( item )
 		if self.loginThread.isRunning():
 			self.table.topLevelItem (self.loginThread.curr).setText (1, 'Logged out')
 			self.loginThread.curr = acc_no
@@ -263,21 +338,25 @@ class MainWindow (QMainWindow):
 			self.table.addTopLevelItem ( new )
 			pbar = QProgressBar()
 			pbar.setRange (0, 102400)
-			self.table.setItemWidget (new, 2, pbar)
+			self.bars.append (pbar)
+			self.table.setItemWidget (new, 2, self.bars[-1])
 			self.accounts.append ( Account(uid, pwd) )
 			self.status.showMessage (uid+' added', 5000)
 		else:
-			dlg = Prompt(None, self)
+			dlg = Prompt(self)
 			dlg.setWindowIcon (QIcon('icons/list-add-user.png'))
 			if dlg.exec_():
 				self.addAccount(dlg.acc.username, dlg.acc.passwd)
 
 	def editAccount (self):
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		dlg = Prompt(self.accounts[current])
+		dlg = Prompt(self.accounts[current].username)
 		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
 		if dlg.exec_():
-			self.table.currentItem().setText (0, self.accounts[current].username)
+			self.table.currentItem().setText (0, dlg.acc.username)
+			self.accounts[current].username = dlg.acc.username
+			if dlg.acc.passwd is not '':
+				self.accounts[current].passwd = dlg.acc.passwd
 			if current == self.loginThread.curr:
 				self.loginThread.doNow = True
 
@@ -289,6 +368,8 @@ class MainWindow (QMainWindow):
 		popped = self.table.takeTopLevelItem (current)
 		rm = self.accounts.pop (current)
 		self.status.showMessage (rm.username+' removed', 5000)
+		self.bars.pop (current)
+		self.updateBars()
 		return popped, rm
 
 	def clearList (self):
@@ -297,6 +378,7 @@ class MainWindow (QMainWindow):
 			return None
 		self.table.clear()
 		self.accounts = []
+		self.bars = []
 		self.status.showMessage ('List cleared', 5000)
 
 	def move (self, to):
@@ -313,11 +395,15 @@ class MainWindow (QMainWindow):
 			self.loginThread += 1
 		elif self.loginThread.curr>current and self.loginThread.curr<=toPos:
 			self.loginThread.curr -= 1
+		pbars=[]
 		tmp1 = self.table.takeTopLevelItem (current)
 		tmp2 = self.accounts.pop (current)
+		tmpbar = self.bars.pop (current)
 		self.table.insertTopLevelItem ( toPos, tmp1 )
 		self.accounts.insert ( toPos, tmp2 )
+		self.bars.insert ( toPos, tmpbar)
 		self.table.setCurrentItem ( self.table.topLevelItem(toPos) )
+		self.updateBars()
 
 	def top (self): self.move (0)
 
@@ -326,6 +412,10 @@ class MainWindow (QMainWindow):
 	def down (self): self.move (2)
 
 	def bottom (self): self.move (3)
+
+	def updateBars (self):
+		for i in range ( len(self.bars) ):
+			self.table.setItemWidget ( self.table.topLevelItem(i), 2, self.bars[i] )
 
 	def quit (self):
 		conf = open ( os.getenv('HOME')+'/.sam.conf', 'w' )
