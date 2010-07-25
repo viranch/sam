@@ -23,104 +23,35 @@ class Config ():
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
 
-class UpdateQuota (QThread):
-
-	def __init__(self, parent=None):
-		super (UpdateQuota, self).__init__(parent)
-		self.parent = parent
-		self.acc_no = -1
-		self.kill = False
-		self.doNow = False
-
-	def run (self, acc_no=None):
-		once = True
-		if acc_no is None:
-			acc_no = self.acc_no
-			once = False
-		while not self.kill:
-			if acc_no==-1:
-				continue
-			this = self.parent.table.topLevelItem(acc_no)
-			uname = self.parent.accounts[acc_no].username+'@da-iict.org'
-			passwd = self.parent.accounts[acc_no].passwd
-			quota = Cyberoam.netUsage ( uname, passwd )
-			#this.setText (2, quota[0])
-			this.setText (3, quota[1])
-			if self.parent.switch:
-				used=quota[0].split()
-				if used[1]=='MB' and float(used[0])>=critical_quota_limit:
-					self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
-					self.parent.login (self.parent.table.topLevelItem(acc_no+1))
-			if once:
-				break
-			self.sleep (self.parent.settings.update_quota_after)
-
-	def sleep (self, sec):
-		i = 0
-		while not self.kill and i<sec and not self.doNow:
-			time.sleep(1)
-			i += 1
-		self.doNow = False
-
-class StayLogin (QThread):
-	
-	def __init__(self, parent=None):
-		super (StayLogin, self).__init__(parent)
-		self.parent = parent
-		self.curr = -1
-		self.kill = False
-		self.doNow = False
-
-	def run (self):
-		self.parent.quotaThread.kill = False
-		if self.curr<0:
-			return None
-		while self.curr<len(self.parent.accounts) and not self.kill:
-			this = self.parent.table.topLevelItem(self.curr)
-			this.setText(1, 'Logging in')
-			try:
-				uname = self.parent.accounts[self.curr].username+'@da-iict.org'
-				passwd = self.parent.accounts[self.curr].passwd
-				Cyberoam.login ( uname, passwd )
-				self.parent.quotaThread.acc_no = self.curr
-				if not self.parent.quotaThread.isRunning():
-					self.parent.quotaThread.start()
-				else:
-					self.parent.quotaThread.doNow = True
-				this.setText (1, 'Logged in')
-				self.sleep (self.parent.settings.relogin_after)
-			except Cyberoam.DataTransferLimitExceeded:
-				self.parent.quotaThread.run (self.curr)
-				this.setText (1, 'Limit Reached')
-				if not self.parent.switch:
-					break
-				self.curr+=1
-			except Cyberoam.WrongPassword:
-				this.setText (1, 'Wrong Password')
-				if not self.parent.switch:
-					break
-				self.curr+=1
-		self.parent.quotaThread.kill = True
-		self.curr = -1
-
-	def sleep (self, sec):
-		i = 0
-		while not self.kill and i<sec and not self.doNow:
-			time.sleep(1)
-			i += 1
-		self.doNow = False
-
 class Account ():
 
-	def __init__ (self, login_id='', passwd=''):
+	def __init__ (self, parent, login_id='', passwd=''):
 		self.username = login_id
 		self.passwd = passwd
+		self.parent = parent
+
+	def login (self):
+		try:
+			Cyberoam.login (self.username+DOMAIN, self.passwd)
+		except Cyberoam.DataTransferLimitExceeded:
+			self.getQuota()
+			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Limit Reached')
+			return False
+		except Cyberoam.WrongPassword:
+			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
+			return False
+		return True
+
+	def getQuota (self, acc_no=None):
+		if acc_no is None:
+			acc_no = self.parent.currentLogin
+		quota = Cyberoam.netUsage(self.username+DOMAIN, self.passwd)
+		self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
 
 class Prompt (QDialog):
 
 	def __init__(self, parent=None, uid=None):
 		super (Prompt, self).__init__(parent)
-		self.acc = Account()
 		
 		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 		unameLabel = QLabel ('Username:')
@@ -146,14 +77,6 @@ class Prompt (QDialog):
 
 		self.connect (self.buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
 		self.connect (self.buttonBox, SIGNAL("rejected()"), self, SLOT('reject()'))
-		self.connect (self.unameEdit, SIGNAL("editingFinished()"), self.showUser)
-		self.connect (self.pwdEdit, SIGNAL("editingFinished()"), self.showPass)
-
-	def showPass(self):
-		self.acc.passwd = str(self.pwdEdit.text())
-	
-	def showUser(self):
-		self.acc.username = str(self.unameEdit.text())
 
 class SettingsDlg (QDialog):
 
@@ -161,15 +84,16 @@ class SettingsDlg (QDialog):
 		super (SettingsDlg, self).__init__(parent)
 		
 		self.setWindowTitle ('Preferences')
-		loginIntervalLabel = QLabel ('Login after every:')
+		loginIntervalLabel = QLabel ('Re-login after every:')
 		loginSpin = QSpinBox ()
 		loginSpin.setRange (1, 60)
-		loginSpin.setValue (self.parent.settings.relogin_after/60)
+		loginSpin.setValue (parent.settings.relogin_after/60)
 		minLabel = QLabel ('minutes')
-		quotaIntervalLabel = QLabel ('Refresh Quota usage every:')
+		minLabel_2 = QLabel ('minutes')
+		quotaIntervalLabel = QLabel ('Refresh Quota usage after every:')
 		quotaSpin = QSpinBox()
 		quotaSpin.setRange (1, 60)
-		quotaSpin.setValue (self.parent.settings.update_quota_after/60)
+		quotaSpin.setValue (parent.settings.update_quota_after/60)
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		hbox1 = QHBoxLayout()
@@ -179,11 +103,11 @@ class SettingsDlg (QDialog):
 		hbox2 = QHBoxLayout()
 		hbox2.addWidget (quotaIntervalLabel)
 		hbox2.addWidget (quotaSpin)
-		hbox2.addWidget (minLabel)
+		hbox2.addWidget (minLabel_2)
 		vbox = QVBoxLayout()
-		vbox.addLayout (hbox1, 0, 0)
-		vbox.addLayout (hbox2, 2, 0)
-		vbox.addWidget (buttonbox, 5, 0)
+		vbox.addLayout (hbox1)
+		vbox.addLayout (hbox2)
+		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
 		self.connect (buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
@@ -195,17 +119,19 @@ class MainWindow (QMainWindow):
 		super (MainWindow, self).__init__(parent)
 
 		self.accounts = []
-		self.loginThread = StayLogin (self)
-		self.quotaThread = UpdateQuota (self)
 		self.settings = Config()
 		self.switch = False
 		self.bars = []
+		self.loginTimer = QTimer()
+		self.quotaTimer = QTimer()
+		self.currentLogin = -1
 
 		self.toolbar = self.addToolBar ('Toolbar')
 		self.status = self.statusBar()
 		self.status.setSizeGripEnabled (False)
 
-		loginAction = self.createAction ('Log In', self.login, 'icons/network-connect.png', 'Log In')
+		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
+		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
 		switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
 		quotaAction = self.createAction ('Get Quota Usage', self.refreshQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
 		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
@@ -216,7 +142,8 @@ class MainWindow (QMainWindow):
 		upAction = self.createAction ('Up', self.up, 'icons/go-up.png', 'Move up')
 		downAction = self.createAction ('Down', self.down, 'icons/go-down.png', 'Move down')
 		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
-		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/', 'Configure SAM', QKeySequence.Preferences)
+		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
+		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
 		menubar = self.menuBar()
@@ -231,14 +158,16 @@ class MainWindow (QMainWindow):
 		actionsMenu = menubar.addMenu ('&Actions')
 		actionsMenu.addAction (loginAction)
 		actionsMenu.addAction (quotaAction)
-		actionsMenu.addAction (switchAction)
+		actionsMenu.addAction (logoutAction)
 		settingsMenu = menubar.addMenu ('&Settings')
+		settingsMenu.addAction (switchAction)
 		settingsMenu.addAction (prefsAction)
+		helpMenu = menubar.addMenu ('&Help')
+		helpMenu.addAction (aboutAction)
 		
 		self.toolbar.addAction ( newUserAction )
 		self.toolbar.addAction ( rmUserAction )
 		self.toolbar.addAction ( editUserAction )
-		self.toolbar.addAction ( clearAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( loginAction )
 		self.toolbar.addAction ( quotaAction )
@@ -270,7 +199,6 @@ class MainWindow (QMainWindow):
 			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
 			accounts = conf.read()
 			conf.close()
-			###print accounts
 			toks = accounts.split('\n\n\n',1)
 			length = int(toks[0])
 			data = toks[1].split('!@#$%^&*')
@@ -288,7 +216,12 @@ class MainWindow (QMainWindow):
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
+		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.accounts[self.currentLogin].login )
+		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.accounts[self.currentLogin].getQuota )
 		#self.connect ( self.table, SIGNAL('itemActivated(QTreeWidgetItem*,int)'), self.login )
+		
+		for i in range( len(self.accounts) ):
+			self.refreshQuota (self.table.topLevelItem(i))
 
 	def updateUi (self, item, column):
 		if column==1:
@@ -298,6 +231,10 @@ class MainWindow (QMainWindow):
 			elif status == 'Logging in' or status == 'Logged out':
 				item.setIcon (0, QIcon(YELLOW))
 			elif status == 'Limit Reached' or status == 'Wrong Password' or status == 'Critical Quota':
+				if self.loginTimer.isActive():
+					self.loginTimer.stop()
+				if self.quotaTimer.isActive():
+					self.quotaTimer.stop()
 				item.setIcon (0, QIcon(RED))
 		elif column==3:
 			quota = str(item.text(3)).split()
@@ -308,27 +245,41 @@ class MainWindow (QMainWindow):
 
 	def configure (self):
 		dlg = SettingsDlg(self)
+		print dlg.exec_()
 
 	def setAutoSwitch (self):
 		self.switch = not self.switch
 
-	def login (self, item=None, column=None):
+	def login (self, item=None):
+		self.loginTimer.stop()
+		self.quotaTimer.stop()
+		prev = self.currentLogin
 		if item is None:
-			acc_no = self.table.indexOfTopLevelItem ( self.table.currentItem() )
+			item = self.table.currentItem()
+		self.currentLogin = self.table.indexOfTopLevelItem ( item )
+		if self.accounts[self.currentLogin].login():
+			self.accounts[self.currentLogin].getQuota()
+			item.setText (1, 'Logged in')
+			self.loginTimer.start ( self.settings.relogin_after*1000 )
+			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
+			if prev!=-1:
+				self.table.topLevelItem (prev).setText (1, 'Logged out')
 		else:
-			acc_no = self.table.indexOfTopLevelItem ( item )
-		if self.loginThread.isRunning():
-			self.table.topLevelItem (self.loginThread.curr).setText (1, 'Logged out')
-			self.loginThread.curr = acc_no
-			self.loginThread.doNow = True
-		else:
-			self.loginThread.curr = acc_no
-			self.loginThread.start()
+			self.currentLogin = -1
 
-	def refreshQuota (self):
+	def logout (self): return
+
+	def refreshQuota (self, item=None):
 		self.status.showMessage ('Refreshing quota...')
-		curr = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		self.quotaThread.run (curr)
+		if item is None:
+			item = self.table.currentItem()
+		curr = self.table.indexOfTopLevelItem ( item )
+		self.accounts[curr].getQuota(curr)
+		#if self.parent.switch:
+			#used=quota[0].split()
+			#if used[1]=='MB' and float(used[0])>=critical_quota_limit:
+				#self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
+				#self.parent.login (self.parent.table.topLevelItem(acc_no+1))
 		self.status.showMessage ('Quota refreshed', 5000)
 
 	def addAccount (self, uid=None, pwd=None):
@@ -340,25 +291,25 @@ class MainWindow (QMainWindow):
 			pbar.setRange (0, 102400)
 			self.bars.append (pbar)
 			self.table.setItemWidget (new, 2, self.bars[-1])
-			self.accounts.append ( Account(uid, pwd) )
+			self.accounts.append ( Account(self, uid, pwd) )
 			self.status.showMessage (uid+' added', 5000)
 		else:
 			dlg = Prompt(self)
 			dlg.setWindowIcon (QIcon('icons/list-add-user.png'))
 			if dlg.exec_():
-				self.addAccount(dlg.acc.username, dlg.acc.passwd)
+				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()))
 
 	def editAccount (self):
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
 		dlg = Prompt(self.accounts[current].username)
 		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
 		if dlg.exec_():
-			self.table.currentItem().setText (0, dlg.acc.username)
-			self.accounts[current].username = dlg.acc.username
-			if dlg.acc.passwd is not '':
-				self.accounts[current].passwd = dlg.acc.passwd
-			if current == self.loginThread.curr:
-				self.loginThread.doNow = True
+			self.table.currentItem().setText (0, dlg.unameEdit.text())
+			self.accounts[current].username = str(dlg.unameEdit.text())
+			if str(dlg.pwdEdit.text()) is not '':
+				self.accounts[current].passwd = str( dlg.pwdEdit.text() )
+			if current == self.currentLogin:
+				self.login ( self.table.topLevelItem(current) )
 
 	def rmAccount (self):
 		if len(self.accounts) == 0:
@@ -417,6 +368,8 @@ class MainWindow (QMainWindow):
 		for i in range ( len(self.bars) ):
 			self.table.setItemWidget ( self.table.topLevelItem(i), 2, self.bars[i] )
 
+	def about (self): return
+
 	def quit (self):
 		conf = open ( os.getenv('HOME')+'/.sam.conf', 'w' )
 		length = str(len(self.accounts))
@@ -428,7 +381,8 @@ class MainWindow (QMainWindow):
 			conf.write(temp)
 		
 		conf.close()
-		self.loginThread.kill = True
+		self.loginTimer.stop()
+		self.quotaTimer.stop()
 		self.close()
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):

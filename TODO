@@ -2,7 +2,7 @@ TODO List:
 
 1. Progress Bars disappear after shuffling(top/up/down/bottom) of list.
 
-2. Reimplement threads with QTimer()s
+2. DONE=( Reimplement threads with QTimer()s ) but now auto-switch feature is broken.
 
 3. Include more options in Settings.
 
