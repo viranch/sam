@@ -259,7 +259,7 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(RED))
 				self.loginTimer.stop()
 				self.quotaTimer.stop()
-				if status=='Critical Quota' and self.settings.switch_on_critical:
+				if status=='Critical Quota' and self.settings.switch_on_critical and self.currentLogin!=len(self.accounts)-1:
 					self.switch()
 				elif status=='Limit Reached' and self.settings.switch:
 					self.switch()
