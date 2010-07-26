@@ -96,23 +96,21 @@ class SettingsDlg (QDialog):
 		
 		loginIntervalLabel = QLabel ('Re-login after every:')
 		self.loginSpin = QSpinBox ()
+		self.loginSpin.setSuffix (' minutes')
 		self.loginSpin.setRange (1, 60)
 		self.loginSpin.setValue (parent.settings.relogin_after/60)
-		minLabel = QLabel ('minutes')
-		hbox1 = QHBoxLayout()
-		hbox1.addWidget (loginIntervalLabel)
-		hbox1.addWidget (self.loginSpin)
-		hbox1.addWidget (minLabel)
 		
-		minLabel_2 = QLabel ('minutes')
 		quotaIntervalLabel = QLabel ('Refresh Quota usage after every:')
 		self.quotaSpin = QSpinBox()
+		self.quotaSpin.setSuffix (' minutes')
 		self.quotaSpin.setRange (1, 60)
 		self.quotaSpin.setValue (parent.settings.update_quota_after/60)
-		hbox2 = QHBoxLayout()
-		hbox2.addWidget (quotaIntervalLabel)
-		hbox2.addWidget (self.quotaSpin)
-		hbox2.addWidget (minLabel_2)
+		
+		grid = QGridLayout()
+		grid.addWidget (loginIntervalLabel, 0, 0)
+		grid.addWidget (self.loginSpin, 0, 1)
+		grid.addWidget (quotaIntervalLabel, 1, 0)
+		grid.addWidget (self.quotaSpin, 1, 1)
 		
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
 		self.autoSwitchCheck.setChecked (True)
@@ -123,36 +121,37 @@ class SettingsDlg (QDialog):
 		self.criticalSwitchCheck = QRadioButton ('Auto-switch when usage reaches', self)
 		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		self.criticalSpin = QDoubleSpinBox()
+		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
 		self.criticalSpin.setValue (parent.settings.critical_quota_limit)
 		self.criticalSpin.setEnabled (self.criticalSwitchCheck.isChecked())
-		mbLabel = QLabel ('MB')
-		hbox3 = QHBoxLayout()
-		hbox3.addWidget (self.criticalSwitchCheck)
-		hbox3.addWidget (self.criticalSpin)
-		hbox3.addWidget (mbLabel)
+		hbox = QHBoxLayout()
+		hbox.addWidget (self.criticalSwitchCheck)
+		hbox.addWidget (self.criticalSpin)
 		
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		vbox = QVBoxLayout()
-		vbox.addLayout (hbox1)
-		vbox.addLayout (hbox2)
+		vbox.addLayout (grid)
 		vbox.addWidget (self.autoSwitchCheck)
 		vbox.addWidget (self.quotaSwitchCheck)
-		vbox.addLayout (hbox3)
+		vbox.addLayout (hbox)
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
-		self.connect (self.autoSwitchCheck, SIGNAL('stateChanged(int)'), self.quotaSwitchCheck.setEnabled)
-		self.connect (self.autoSwitchCheck, SIGNAL('stateChanged(int)'), self.criticalSwitchCheck.setEnabled)
-		self.connect (self.autoSwitchCheck, SIGNAL('stateChanged(int)'), mbLabel.setEnabled)
+		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
 		
 		self.autoSwitchCheck.setChecked (parent.settings.switch)
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
 			self.quotaSwitchCheck.setChecked (True)
+
+	def updateUi (self, state):
+		self.quotaSwitchCheck.setEnabled ( state )
+		self.criticalSwitchCheck.setEnabled ( state )
+		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
 
 class MainWindow (QMainWindow):
 
