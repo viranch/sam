@@ -21,7 +21,7 @@ conf_file = '.samconf.conf'
 class Config ():
 
 	def __init__ (self):
-		self.switch = False
+		self.switch = True
 		self.switch_on_critical = False
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
