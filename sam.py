@@ -263,7 +263,7 @@ class MainWindow (QMainWindow):
 					self.switch()
 				elif status=='Limit Reached' and self.settings.switch:
 					self.switch()
-		elif column==3:
+		elif column == 3:
 			quota = str(item.text(3)).split()
 			rem = float(quota[0]) if quota[1] is 'KB' else float(quota[0])*1024
 			used = 102400 - rem
