@@ -4,3 +4,4 @@ TODO List:
 
 2. Apply settings after user OKs the preferences dialog.
 
+3. Read/write user preferences to conf_file when starting/quiting the app.
