@@ -91,7 +91,7 @@ class SettingsDlg (QDialog):
 
 	def __init__(self, parent):
 		super (SettingsDlg, self).__init__(parent)
-		
+		self.parent = parent
 		self.setWindowTitle ('Preferences')
 		
 		loginIntervalLabel = QLabel ('Re-login after every:')
@@ -119,14 +119,12 @@ class SettingsDlg (QDialog):
 		
 		criticalSwitchCheck = QCheckBox ('Auto-switch when quota reaches')
 		criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
-		criticalSwitchCheck.setEnabled (autoSwitchCheck.isChecked())
 		criticalSpin = QDoubleSpinBox()
 		criticalSpin.setRange (0, 100)
-		criticalSpin.setEnabled (autoSwitchCheck.isChecked())
+		criticalSpin.setEnabled (criticalSwitchCheck.isChecked())
 		hbox3 = QHBoxLayout()
 		hbox3.addWidget (criticalSwitchCheck)
 		hbox3.addWidget (criticalSpin)
-		#hbox3.setEnabled (autoSwitchCheck.isChecked())
 		
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
@@ -138,8 +136,9 @@ class SettingsDlg (QDialog):
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
-		self.connect (buttonBox, SIGNAL("accepted()"), self, SLOT('accept()'))
-		self.connect (buttonBox, SIGNAL("rejected()"), self, SLOT('reject()'))
+		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
+		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
+		self.connect (criticalSwitchCheck, SIGNAL('stateChanged(int)'), criticalSpin.setEnabled)
 
 class MainWindow (QMainWindow):
 
@@ -260,7 +259,9 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(RED))
 				self.loginTimer.stop()
 				self.quotaTimer.stop()
-				if self.settings.switch:
+				if status=='Critical Quota' and self.settings.switch_on_critical:
+					self.switch()
+				elif self.settings.switch:
 					self.switch()
 		elif column==3:
 			quota = str(item.text(3)).split()
@@ -277,7 +278,7 @@ class MainWindow (QMainWindow):
 		self.settings.switch = not self.settings.switch
 
 	def switch (self):
-		if not self.settings.switch:
+		if not self.settings.switch and not self.settings.switch_on_critical:
 			return None
 		next = self.table.topLevelItem(self.currentLogin+1)
 		if next is not None:
