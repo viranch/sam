@@ -21,7 +21,8 @@ conf_file = '.samconf.conf'
 class Config ():
 
 	def __init__ (self):
-		self.switch = True
+		self.autoSwitch = False
+		self.switch = False
 		self.switch_on_critical = False
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
@@ -113,13 +114,13 @@ class SettingsDlg (QDialog):
 		grid.addWidget (self.quotaSpin, 1, 1)
 		
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
-		self.autoSwitchCheck.setChecked (True)
+		self.autoSwitchCheck.setChecked (parent.settings.autoSwitch)
 		
 		self.quotaSwitchCheck = QRadioButton ('Auto-switch when Data Transfer Limit exceeds', self)
-		self.quotaSwitchCheck.setChecked (parent.settings.switch)
+		self.quotaSwitchCheck.setChecked (parent.settings.switch )
 		
 		self.criticalSwitchCheck = QRadioButton ('Auto-switch when usage reaches', self)
-		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
+		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical )
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
@@ -142,13 +143,26 @@ class SettingsDlg (QDialog):
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
-		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
+		#self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
+		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.updateRadio)
 		
-		self.autoSwitchCheck.setChecked (parent.settings.switch)
+	
+		self.quotaSwitchCheck.setEnabled ( parent.settings.autoSwitch)
+		self.criticalSwitchCheck.setEnabled ( parent.settings.autoSwitch)
+		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and parent.settings.autoSwitch)
+		"""
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
+			print "main"
 			self.quotaSwitchCheck.setChecked (True)
-
+"""
+	def updateRadio(self,state):
+		self.quotaSwitchCheck.setChecked(not state)
+		#state = not state
+		self.criticalSwitchCheck.setChecked(state)
+		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
+		
 	def updateUi (self, state):
+		self.parent.settings.autoSwitch=state
 		self.quotaSwitchCheck.setEnabled ( state )
 		self.criticalSwitchCheck.setEnabled ( state )
 		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
@@ -250,6 +264,30 @@ class MainWindow (QMainWindow):
 				passwd = passwd[0:index]
 				self.addAccount(user,passwd)
 				i = i+2
+				
+			conf.close()
+			conf = open(os.getenv('HOME')+'/'+conf_file,'r')
+			pref = conf.readlines()
+			if len(pref)==6:
+			    if pref[0] == 'True\n':
+				self.settings.switch = True
+			    else:
+				self.settings.switch = False
+			    if pref[1]=='True\n':
+				self.settings.switch_on_critical = bool(pref[1])
+			    else:
+				self.settings.switch_on_critical = False
+			    
+			    self.settings.update_quota_after = int(pref[2])
+			    self.settings.relogin_after = int(pref[3])
+			   # print self.settings.switch
+			    self.settings.critical_quota_limit = float(pref[4])
+			   # print self.settings.switch_on_critical
+			    if pref[5] == 'True\n':
+				self.settings.autoSwitch = True
+			    else:
+				self.settings.autoSwitch = False
+
 		except: pass
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
@@ -285,8 +323,19 @@ class MainWindow (QMainWindow):
 
 	def configure (self):
 		dlg = SettingsDlg(self)
-		print dlg.exec_()
-
+		if dlg.exec_():
+			self.settings.relogin_after = dlg.loginSpin.value()*60
+			self.settings.update_quota_after = dlg.quotaSpin.value()*60
+			if dlg.quotaSwitchCheck.isChecked():
+			    self.settings.critical_quota_limit = 95.00
+			else:
+			    self.settings.critical_quota_limit = dlg.criticalSpin.value()
+			
+			self.settings.switch = dlg.quotaSwitchCheck.isChecked()
+			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked()
+		
+			#print self.settings.switch 
+			#print self.settings.switch_on_critical 
 	def setAutoSwitch (self):
 		self.settings.switch = not self.settings.switch
 
@@ -431,6 +480,16 @@ class MainWindow (QMainWindow):
 			conf.write(temp)
 		
 		conf.close()
+		
+		conf = open(os.getenv('HOME')+'/'+conf_file,'w')
+		conf.write(str(self.settings.switch) + '\n')
+		conf.write(str(self.settings.switch_on_critical)+'\n')
+		conf.write(str(self.settings.update_quota_after)+'\n')
+		conf.write(str(self.settings.relogin_after)+'\n')
+		conf.write(str(self.settings.critical_quota_limit)+'\n')
+		conf.write(str(self.settings.autoSwitch)+'\n')
+		conf.close()
+		
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
 		self.close()
