@@ -143,6 +143,7 @@ class SettingsDlg (QDialog):
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
+		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.parent.setAutoSwitch)
 		#self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.updateRadio)
 		
@@ -185,7 +186,7 @@ class MainWindow (QMainWindow):
 
 		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
 		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
-		switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
+		self.switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
 		quotaAction = self.createAction ('Get Quota Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
 		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
 		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User', QKeySequence.Delete)
@@ -213,7 +214,7 @@ class MainWindow (QMainWindow):
 		actionsMenu.addAction (quotaAction)
 		actionsMenu.addAction (logoutAction)
 		settingsMenu = menubar.addMenu ('&Settings')
-		settingsMenu.addAction (switchAction)
+		settingsMenu.addAction (self.switchAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
 		helpMenu.addAction (aboutAction)
@@ -287,9 +288,15 @@ class MainWindow (QMainWindow):
 				self.settings.autoSwitch = True
 			    else:
 				self.settings.autoSwitch = False
+				
+			conf.close()
+			
+			
 
 		except: pass
 		
+		self.switchAction.setChecked(self.settings.autoSwitch)
+	
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
@@ -336,8 +343,10 @@ class MainWindow (QMainWindow):
 		
 			#print self.settings.switch 
 			#print self.settings.switch_on_critical 
-	def setAutoSwitch (self):
-		self.settings.switch = not self.settings.switch
+	def setAutoSwitch (self,state=None):
+		if state == None:
+		    self.settings.autoSwitch = not self.settings.autoSwitch
+		self.switchAction.setChecked(self.settings.autoSwitch)
 
 	def switch (self):
 		if not self.settings.switch and not self.settings.switch_on_critical:
