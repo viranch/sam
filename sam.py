@@ -15,10 +15,14 @@ DOMAIN = '@da-iict.org'
 GREEN = 'icons/ball-green.png'
 RED = 'icons/ball-red.png'
 YELLOW = 'icons/ball-yellow.png'
+acc_file = '.samacc.conf'
+conf_file = '.samconf.conf'
 
 class Config ():
 
 	def __init__ (self):
+		self.switch = False
+		self.switch_on_critical = False
 		self.update_quota_after = 900 #seconds = 15 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
@@ -120,7 +124,6 @@ class MainWindow (QMainWindow):
 
 		self.accounts = []
 		self.settings = Config()
-		self.switch = False
 		self.bars = []
 		self.loginTimer = QTimer()
 		self.quotaTimer = QTimer()
@@ -133,7 +136,7 @@ class MainWindow (QMainWindow):
 		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
 		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
 		switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
-		quotaAction = self.createAction ('Get Quota Usage', self.refreshQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
+		quotaAction = self.createAction ('Get Quota Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
 		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
 		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User', QKeySequence.Delete)
 		editUserAction = self.createAction ('&Edit...', self.editAccount, 'icons/user-properties.png', 'Edit User')
@@ -196,7 +199,7 @@ class MainWindow (QMainWindow):
 		self.tray.show()
 		
 		try:
-			conf = open ( os.getenv('HOME')+'/.sam.conf', 'r' )
+			conf = open ( os.getenv('HOME')+'/'+acc_file, 'r' )
 			accounts = conf.read()
 			conf.close()
 			toks = accounts.split('\n\n\n',1)
@@ -216,12 +219,12 @@ class MainWindow (QMainWindow):
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
-		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.accounts[self.currentLogin].login )
-		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.accounts[self.currentLogin].getQuota )
+		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
+		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.refreshQuota )
 		#self.connect ( self.table, SIGNAL('itemActivated(QTreeWidgetItem*,int)'), self.login )
 		
 		for i in range( len(self.accounts) ):
-			self.refreshQuota (self.table.topLevelItem(i))
+			self.getQuota (self.table.topLevelItem(i))
 
 	def updateUi (self, item, column):
 		if column==1:
@@ -231,11 +234,11 @@ class MainWindow (QMainWindow):
 			elif status == 'Logging in' or status == 'Logged out':
 				item.setIcon (0, QIcon(YELLOW))
 			elif status == 'Limit Reached' or status == 'Wrong Password' or status == 'Critical Quota':
-				if self.loginTimer.isActive():
-					self.loginTimer.stop()
-				if self.quotaTimer.isActive():
-					self.quotaTimer.stop()
 				item.setIcon (0, QIcon(RED))
+				self.loginTimer.stop()
+				self.quotaTimer.stop()
+				if self.settings.switch:
+					self.switch()
 		elif column==3:
 			quota = str(item.text(3)).split()
 			rem = float(quota[0]) if quota[1] is 'KB' else float(quota[0])*1024
@@ -248,28 +251,41 @@ class MainWindow (QMainWindow):
 		print dlg.exec_()
 
 	def setAutoSwitch (self):
-		self.switch = not self.switch
+		self.settings.switch = not self.settings.switch
 
-	def login (self, item=None):
+	def switch (self):
+		next = self.table.topLevelItem(self.currentLogin+1)
+		if next is not None:
+			self.login ( next, 0, True )
+
+	def login (self, item=None, column=-1, switch=False):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
 		prev = self.currentLogin
 		if item is None:
 			item = self.table.currentItem()
 		self.currentLogin = self.table.indexOfTopLevelItem ( item )
+		if self.currentLogin<0:
+			return None
 		if self.accounts[self.currentLogin].login():
 			self.accounts[self.currentLogin].getQuota()
 			item.setText (1, 'Logged in')
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
-			if prev!=-1:
+			if prev!=-1 and prev!=self.currentLogin and not switch:
 				self.table.topLevelItem (prev).setText (1, 'Logged out')
 		else:
 			self.currentLogin = -1
 
+	def reLogin (self):
+		self.accounts[self.currentLogin].login
+
 	def logout (self): return
 
-	def refreshQuota (self, item=None):
+	def refreshQuota (self):
+		self.accounts[self.currentLogin].getQuota
+
+	def getQuota (self, item=None):
 		self.status.showMessage ('Refreshing quota...')
 		if item is None:
 			item = self.table.currentItem()
@@ -371,7 +387,7 @@ class MainWindow (QMainWindow):
 	def about (self): return
 
 	def quit (self):
-		conf = open ( os.getenv('HOME')+'/.sam.conf', 'w' )
+		conf = open ( os.getenv('HOME')+'/'+acc_file, 'w' )
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
