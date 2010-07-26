@@ -261,7 +261,7 @@ class MainWindow (QMainWindow):
 				self.quotaTimer.stop()
 				if status=='Critical Quota' and self.settings.switch_on_critical:
 					self.switch()
-				elif self.settings.switch:
+				elif status=='Limit Reached' and self.settings.switch:
 					self.switch()
 		elif column==3:
 			quota = str(item.text(3)).split()
