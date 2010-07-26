@@ -23,7 +23,7 @@ class Config ():
 	def __init__ (self):
 		self.switch = False
 		self.switch_on_critical = False
-		self.update_quota_after = 900 #seconds = 15 mins
+		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
 
@@ -37,6 +37,7 @@ class Account ():
 	def login (self):
 		try:
 			Cyberoam.login (self.username+DOMAIN, self.passwd)
+			print
 		except Cyberoam.DataTransferLimitExceeded:
 			self.getQuota()
 			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Limit Reached')
@@ -51,6 +52,10 @@ class Account ():
 			acc_no = self.parent.currentLogin
 		quota = Cyberoam.netUsage(self.username+DOMAIN, self.passwd)
 		self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
+		if self.parent.settings.switch_on_critical:
+			used=quota[0].split()
+			if used[1]=='MB' and float(used[0])>=self.parent.settings.critical_quota_limit:
+				self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
 
 class Prompt (QDialog):
 
@@ -88,29 +93,48 @@ class SettingsDlg (QDialog):
 		super (SettingsDlg, self).__init__(parent)
 		
 		self.setWindowTitle ('Preferences')
+		
 		loginIntervalLabel = QLabel ('Re-login after every:')
 		loginSpin = QSpinBox ()
 		loginSpin.setRange (1, 60)
 		loginSpin.setValue (parent.settings.relogin_after/60)
 		minLabel = QLabel ('minutes')
+		hbox1 = QHBoxLayout()
+		hbox1.addWidget (loginIntervalLabel)
+		hbox1.addWidget (loginSpin)
+		hbox1.addWidget (minLabel)
+		
 		minLabel_2 = QLabel ('minutes')
 		quotaIntervalLabel = QLabel ('Refresh Quota usage after every:')
 		quotaSpin = QSpinBox()
 		quotaSpin.setRange (1, 60)
 		quotaSpin.setValue (parent.settings.update_quota_after/60)
-		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
-		
-		hbox1 = QHBoxLayout()
-		hbox1.addWidget (loginIntervalLabel)
-		hbox1.addWidget (loginSpin)
-		hbox1.addWidget (minLabel)
 		hbox2 = QHBoxLayout()
 		hbox2.addWidget (quotaIntervalLabel)
 		hbox2.addWidget (quotaSpin)
 		hbox2.addWidget (minLabel_2)
+		
+		autoSwitchCheck = QCheckBox ('Auto-switch when Data Transfer Limit exceeds')
+		autoSwitchCheck.setChecked (parent.settings.switch)
+		
+		criticalSwitchCheck = QCheckBox ('Auto-switch when quota reaches')
+		criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
+		criticalSwitchCheck.setEnabled (autoSwitchCheck.isChecked())
+		criticalSpin = QDoubleSpinBox()
+		criticalSpin.setRange (0, 100)
+		criticalSpin.setEnabled (autoSwitchCheck.isChecked())
+		hbox3 = QHBoxLayout()
+		hbox3.addWidget (criticalSwitchCheck)
+		hbox3.addWidget (criticalSpin)
+		#hbox3.setEnabled (autoSwitchCheck.isChecked())
+		
+		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
+		
 		vbox = QVBoxLayout()
 		vbox.addLayout (hbox1)
 		vbox.addLayout (hbox2)
+		vbox.addWidget (autoSwitchCheck)
+		vbox.addLayout (hbox3)
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
@@ -214,7 +238,6 @@ class MainWindow (QMainWindow):
 				passwd = passwd[0:index]
 				self.addAccount(user,passwd)
 				i = i+2
-			self.status.showMessage ('Users loaded', 5000)
 		except: pass
 		
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
@@ -254,6 +277,8 @@ class MainWindow (QMainWindow):
 		self.settings.switch = not self.settings.switch
 
 	def switch (self):
+		if not self.settings.switch:
+			return None
 		next = self.table.topLevelItem(self.currentLogin+1)
 		if next is not None:
 			self.login ( next, 0, True )
@@ -291,11 +316,6 @@ class MainWindow (QMainWindow):
 			item = self.table.currentItem()
 		curr = self.table.indexOfTopLevelItem ( item )
 		self.accounts[curr].getQuota(curr)
-		#if self.parent.switch:
-			#used=quota[0].split()
-			#if used[1]=='MB' and float(used[0])>=critical_quota_limit:
-				#self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
-				#self.parent.login (self.parent.table.topLevelItem(acc_no+1))
 		self.status.showMessage ('Quota refreshed', 5000)
 
 	def addAccount (self, uid=None, pwd=None):
