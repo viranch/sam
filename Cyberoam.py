@@ -108,22 +108,4 @@ def logout (username, passwd):
 	except IOError, (errno, strerror):
 		raise Timeout
 	s = f.read()
-	# Try and process the page.
-	# The class should have been defined first, remember.
-	myparser = MyCyberroamParser()
-	myparser.parse(s)
-	
-	# Get the the src targets. It contains the status message. And then parse it again for entity &message.
-	qindex = myparser.get_src(1).index('?')
-	srcstr = myparser.get_src(1)[:qindex+1]+'&'+myparser.get_src(1)[qindex+1:]
-	
-	myparser.parse(srcstr)
-	message = myparser.entity_values['message']
-	message = message.replace('+',' ')
-	
-	if message == "The system could not log you on. Make sure your password is correct":
-		raise WrongPassword
-	if message == "DataTransfer limit has been exceeded":
-		raise DataTransferLimitExceeded
-	if message == "You have successfully logged off":
-		print "LOGGED OUT"
+	f.close()

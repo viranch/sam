@@ -51,17 +51,9 @@ class Account ():
 		return True
 
 	def logout (self):
-		try:
-			Cyberoam.logout(self.username+DOMAIN,self.passwd)
-		except Cyberoam.DataTransferLimitExceeded:
-			self.getQuota()
-			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Limit Reached')
-			return False
-		except Cyberoam.WrongPassword:
-			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
-			return False
-		return True
-	
+		self.getQuota (self.parent.currentLogin)
+		Cyberoam.logout (self.username+DOMAIN, self.passwd)
+
 	def getQuota (self, acc_no=None):
 		if acc_no is None:
 			acc_no = self.parent.currentLogin
@@ -152,6 +144,8 @@ class MainWindow (QMainWindow):
 		self.trayMenu = QMenu ()
 		self.trayMenu.addAction ( loginAction )
 		self.trayMenu.addAction ( quotaAction )
+		self.trayMenu.addAction ( logoutAction )
+		self.trayMenu.addSeparator()
 		self.trayMenu.addAction ( quitAction )
 		self.tray.setContextMenu ( self.trayMenu )
 		
@@ -239,6 +233,7 @@ class MainWindow (QMainWindow):
 			return None
 		next = self.table.topLevelItem (self.currentLogin+1)
 		if next is not None:
+			self.logout ()
 			self.login ( next, 0, True )
 
 	def login (self, item=None, column=-1, switch=False):
@@ -256,23 +251,23 @@ class MainWindow (QMainWindow):
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 			if prev!=-1 and prev!=self.currentLogin and not switch:
-				self.table.topLevelItem (prev).setText (1, 'Inactive')
+				self.table.topLevelItem (prev).setText (1, 'Logged out')
 		else:
 			self.currentLogin = -1
 
 	def reLogin (self):
 		self.accounts[self.currentLogin].login
 
-	def logout (self):
-		print type(self.table)
-		
- 		if self.currentLogin<0:
+	def logout (self, acc_no=None):
+		if acc_no is None:
+			acc_no = self.currentLogin
+ 		if acc_no<0:
 			return None
-		item = self.table.topLevelItem(self.currentLogin)
-		if self.accounts[self.currentLogin].logout():
-			item.setText(1,'Logged out')
-			self.loginTimer.stop()
-			self.quotaTimer.stop()
+		self.accounts[acc_no].logout()
+		self.table.topLevelItem(acc_no).setText(1,'Logged out')
+		self.loginTimer.stop()
+		self.quotaTimer.stop()
+		self.currentLogin = -1
 
 	def refreshQuota (self):
 		self.accounts[self.currentLogin].getQuota
