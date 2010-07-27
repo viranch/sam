@@ -391,7 +391,6 @@ class MainWindow (QMainWindow):
 				self.show()
 		elif reason == QSystemTrayIcon.Context:
 			print 'show menu'
-			self.tray.contextMenu().exec()
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
 		action = QAction (text, self)
