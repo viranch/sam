@@ -78,8 +78,8 @@ class MainWindow (QMainWindow):
 		super (MainWindow, self).__init__(parent)
 
 		self.accounts = []
-		self.settings = Config()
 		self.bars = []
+		self.settings = Config()
 		self.loginTimer = QTimer()
 		self.quotaTimer = QTimer()
 		self.currentLogin = -1
@@ -290,7 +290,7 @@ class MainWindow (QMainWindow):
 		self.currentLogin = -1
 
 	def refreshQuota (self):
-		self.accounts[self.currentLogin].getQuota
+		self.accounts[self.currentLogin].getQuota()
 
 	def getQuota (self, item=None):
 		self.status.showMessage ('Refreshing quota...')
@@ -305,9 +305,7 @@ class MainWindow (QMainWindow):
 			new = QTreeWidgetItem ([uid, '', '', ''])
 			new.setIcon (0, QIcon(YELLOW))
 			self.table.addTopLevelItem ( new )
-			#pbar = QProgressBar()
-			#pbar.setRange (0, 102400)
-			self.bars.append (QProgressBar())
+			self.bars.append( QProgressBar() )
 			self.bars[-1].setRange (0, 102400)
 			self.table.setItemWidget (new, 2, self.bars[-1])
 			self.accounts.append ( Account(self, uid, pwd) )
@@ -355,29 +353,20 @@ class MainWindow (QMainWindow):
 		if len(self.accounts)<2:
 			return None
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		bound = (to>1) * (len(self.accounts)-1)
+		bound = (to>0) * (len(self.accounts)-1)
 		if current == bound:
 			return None
-		toPos = [0, current-1, current+1, len(self.accounts)-1][to]
-		if self.currentLogin==current:
-			self.currentLogin = toPos
-		elif self.currentLogin<current and self.currentLogin>=toPos:
-			self.loginThread += 1
-		elif self.currentLogin>current and self.currentLogin<=toPos:
-			self.currentLogin -= 1
-		pbars=[]
+		self.currentLogin += to
 		tmp1 = self.table.takeTopLevelItem (current)
 		tmp2 = self.accounts.pop (current)
-		tmpbar = self.bars.pop (current)
-		self.table.insertTopLevelItem ( toPos, tmp1 )
-		self.accounts.insert ( toPos, tmp2 )
-		self.bars.insert ( toPos, tmpbar)
-		self.table.setCurrentItem ( self.table.topLevelItem(toPos) )
+		self.table.insertTopLevelItem ( current+to, tmp1 )
+		self.accounts.insert ( current+to, tmp2 )
+		self.table.setCurrentItem ( self.table.topLevelItem(current+to) )
 		self.updateBars()
 
-	def up (self): self.move (1)
+	def up (self): self.move (-1)
 
-	def down (self): self.move (2)
+	def down (self): self.move (1)
 
 	def updateBars (self):
 		for i in range ( len(self.bars) ):
@@ -415,10 +404,7 @@ class MainWindow (QMainWindow):
 
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
-			if self.isVisible():
-				self.hide()
-			else:
-				self.show()
+			self.hide() if self.isVisible() else self.show()
 		elif reason == QSystemTrayIcon.Context:
 			print 'show menu'
 
