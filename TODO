@@ -2,12 +2,5 @@ TODO List:
 
 1. Progress Bars disappear after shuffling(top/up/down/bottom) of list.
 
-2. Apply settings after user OKs the preferences dialog.
 
-3. Read/write user preferences to conf_file when starting/quiting the app.
 
-4. Write "About"
-
-5. System tray context menu
-
-6. Implement logout.

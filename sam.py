@@ -49,6 +49,7 @@ class Account ():
 			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
 			return False
 		return True
+
 	def logout (self):
 		try:
 			Cyberoam.logout(self.username+DOMAIN,self.passwd)
@@ -89,18 +90,16 @@ class MainWindow (QMainWindow):
 
 		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
 		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
-		quotaAction = self.createAction ('Get Quota Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
-		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
-		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User', QKeySequence.Delete)
-		editUserAction = self.createAction ('&Edit...', self.editAccount, 'icons/user-properties.png', 'Edit User')
+		quotaAction = self.createAction ('Get Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
+		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/user-add-icon.png', 'Create User', QKeySequence.New)
+		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/user-remove-icon.png', 'Remove User', QKeySequence.Delete)
+		editUserAction = self.createAction ('&Edit...', self.editAccount, 'icons/user-icon.png', 'Edit User')
 		clearAction = self.createAction ('&Clear All', self.clearList, 'icons/edit-clear-list.png', 'Clear Users list')
-		topAction = self.createAction ('Top', self.top, 'icons/go-top.png', 'Move to top')
-		upAction = self.createAction ('Up', self.up, 'icons/go-up.png', 'Move up')
-		downAction = self.createAction ('Down', self.down, 'icons/go-down.png', 'Move down')
-		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
+		upAction = self.createAction ('Up', self.up, 'icons/up-icon.png', 'Move up')
+		downAction = self.createAction ('Down', self.down, 'icons/down-icon.png', 'Move down')
 		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
-		quitAction = self.createAction ('Quit 	Ctrl+Q', self.quit, 'icons/application-exit.png', 'Quit SAM')
+		quitAction = self.createAction ('&Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
@@ -122,16 +121,13 @@ class MainWindow (QMainWindow):
 		
 		self.toolbar.addAction ( newUserAction )
 		self.toolbar.addAction ( rmUserAction )
-		self.toolbar.addAction ( editUserAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( loginAction )
 		self.toolbar.addAction ( quotaAction )
 		self.toolbar.addAction ( logoutAction )
 		self.toolbar.addSeparator()
-		self.toolbar.addAction ( topAction )
 		self.toolbar.addAction ( upAction )
 		self.toolbar.addAction ( downAction )
-		self.toolbar.addAction ( bottomAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( prefsAction )
 		self.toolbar.addAction ( aboutAction )
@@ -192,12 +188,6 @@ class MainWindow (QMainWindow):
 			conf.close()
 		except: pass
 		
-		exit = QAction(self)
-		print type(self)
-		exit.setShortcut('Ctrl+Q')
-		self.addAction(exit)
-
-		self.connect (exit,SIGNAL('triggered()'),qApp,SLOT('quit()'))	
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
@@ -226,7 +216,7 @@ class MainWindow (QMainWindow):
 				self.quotaTimer.stop()
 				if status=='Critical Quota' and self.settings.switch_on_critical:
 					self.switch()
-				elif status=='Limit Reached' and self.settings.switch:
+				elif status=='Limit Reached' and self.settings.switch_on_limit:
 					self.switch()
 		elif column == 3:
 			quota = str(item.text(3)).split()
@@ -314,7 +304,7 @@ class MainWindow (QMainWindow):
 
 	def editAccount (self):
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		dlg = Prompt(self.accounts[current].username)
+		dlg = Prompt(self, self.accounts[current].username)
 		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
 		if dlg.exec_():
 			self.table.currentItem().setText (0, dlg.unameEdit.text())
@@ -369,13 +359,9 @@ class MainWindow (QMainWindow):
 		self.table.setCurrentItem ( self.table.topLevelItem(toPos) )
 		self.updateBars()
 
-	def top (self): self.move (0)
-
 	def up (self): self.move (1)
 
 	def down (self): self.move (2)
-
-	def bottom (self): self.move (3)
 
 	def updateBars (self):
 		for i in range ( len(self.bars) ):
