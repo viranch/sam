@@ -21,8 +21,7 @@ conf_file = '.samconf.conf'
 class Config ():
 
 	def __init__ (self):
-		self.autoSwitch = False
-		self.switch = False
+		self.switch_on_limit = False
 		self.switch_on_critical = False
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
@@ -114,13 +113,13 @@ class SettingsDlg (QDialog):
 		grid.addWidget (self.quotaSpin, 1, 1)
 		
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
-		self.autoSwitchCheck.setChecked (parent.settings.autoSwitch)
+		self.autoSwitchCheck.setChecked (parent.settings.switch_on_critical or parent.settings.switch_on_limit)
 		
 		self.quotaSwitchCheck = QRadioButton ('Auto-switch when Data Transfer Limit exceeds', self)
-		self.quotaSwitchCheck.setChecked (parent.settings.switch )
+		self.quotaSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		
 		self.criticalSwitchCheck = QRadioButton ('Auto-switch when usage reaches', self)
-		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical )
+		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
@@ -143,27 +142,13 @@ class SettingsDlg (QDialog):
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
-		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.parent.setAutoSwitch)
-		#self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
-		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.updateRadio)
+		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
 		
-	
-		self.quotaSwitchCheck.setEnabled ( parent.settings.autoSwitch)
-		self.criticalSwitchCheck.setEnabled ( parent.settings.autoSwitch)
-		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and parent.settings.autoSwitch)
-		"""
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
-			print "main"
 			self.quotaSwitchCheck.setChecked (True)
-"""
-	def updateRadio(self,state):
-		self.quotaSwitchCheck.setChecked(not state)
-		#state = not state
-		self.criticalSwitchCheck.setChecked(state)
-		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
-		
+		self.updateUi(self.autoSwitchCheck.isChecked())
+
 	def updateUi (self, state):
-		self.parent.settings.autoSwitch=state
 		self.quotaSwitchCheck.setEnabled ( state )
 		self.criticalSwitchCheck.setEnabled ( state )
 		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
@@ -186,7 +171,6 @@ class MainWindow (QMainWindow):
 
 		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
 		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
-		self.switchAction = self.createAction ('Auto Switch', self.setAutoSwitch, 'icons/switch-user.png', 'Auto switch to user in queue in case of error', None, True)
 		quotaAction = self.createAction ('Get Quota Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
 		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/list-add-user.png', 'Create User', QKeySequence.New)
 		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/list-remove-user.png', 'Remove User', QKeySequence.Delete)
@@ -214,7 +198,6 @@ class MainWindow (QMainWindow):
 		actionsMenu.addAction (quotaAction)
 		actionsMenu.addAction (logoutAction)
 		settingsMenu = menubar.addMenu ('&Settings')
-		settingsMenu.addAction (self.switchAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
 		helpMenu.addAction (aboutAction)
@@ -265,38 +248,24 @@ class MainWindow (QMainWindow):
 				passwd = passwd[0:index]
 				self.addAccount(user,passwd)
 				i = i+2
-				
-			conf.close()
 			conf = open(os.getenv('HOME')+'/'+conf_file,'r')
 			pref = conf.readlines()
 			if len(pref)==6:
-			    if pref[0] == 'True\n':
-				self.settings.switch = True
-			    else:
-				self.settings.switch = False
-			    if pref[1]=='True\n':
-				self.settings.switch_on_critical = bool(pref[1])
-			    else:
-				self.settings.switch_on_critical = False
-			    
-			    self.settings.update_quota_after = int(pref[2])
-			    self.settings.relogin_after = int(pref[3])
-			   # print self.settings.switch
-			    self.settings.critical_quota_limit = float(pref[4])
-			   # print self.settings.switch_on_critical
-			    if pref[5] == 'True\n':
-				self.settings.autoSwitch = True
-			    else:
-				self.settings.autoSwitch = False
-				
+				if pref[0] == 'True\n':
+					self.settings.switch_on_limit = True
+				else:
+					self.settings.switch_on_limit = False
+				if pref[1]=='True\n':
+					self.settings.switch_on_critical = True
+				else:
+					self.settings.switch_on_critical = False
+			
+				self.settings.update_quota_after = int(pref[2])
+				self.settings.relogin_after = int(pref[3])
+				self.settings.critical_quota_limit = float(pref[4])
 			conf.close()
-			
-			
-
 		except: pass
 		
-		self.switchAction.setChecked(self.settings.autoSwitch)
-	
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
@@ -317,7 +286,7 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(RED))
 				self.loginTimer.stop()
 				self.quotaTimer.stop()
-				if status=='Critical Quota' and self.settings.switch_on_critical and self.currentLogin!=len(self.accounts)-1:
+				if status=='Critical Quota' and self.settings.switch_on_critical:
 					self.switch()
 				elif status=='Limit Reached' and self.settings.switch:
 					self.switch()
@@ -333,25 +302,14 @@ class MainWindow (QMainWindow):
 		if dlg.exec_():
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
-			if dlg.quotaSwitchCheck.isChecked():
-			    self.settings.critical_quota_limit = 95.00
-			else:
-			    self.settings.critical_quota_limit = dlg.criticalSpin.value()
-			
-			self.settings.switch = dlg.quotaSwitchCheck.isChecked()
-			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked()
-		
-			#print self.settings.switch 
-			#print self.settings.switch_on_critical 
-	def setAutoSwitch (self,state=None):
-		if state == None:
-		    self.settings.autoSwitch = not self.settings.autoSwitch
-		self.switchAction.setChecked(self.settings.autoSwitch)
+			self.settings.critical_quota_limit = dlg.criticalSpin.value()
+			self.settings.switch_on_limit = dlg.quotaSwitchCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
+			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
 
 	def switch (self):
-		if not self.settings.switch and not self.settings.switch_on_critical:
+		if not (self.settings.switch_on_limit or self.settings.switch_on_critical):
 			return None
-		next = self.table.topLevelItem(self.currentLogin+1)
+		next = self.table.topLevelItem (self.currentLogin+1)
 		if next is not None:
 			self.login ( next, 0, True )
 
@@ -448,12 +406,12 @@ class MainWindow (QMainWindow):
 		if current == bound:
 			return None
 		toPos = [0, current-1, current+1, len(self.accounts)-1][to]
-		if self.loginThread.curr==current:
-			self.loginThread.curr = toPos
-		elif self.loginThread.curr<current and self.loginThread.curr>=toPos:
+		if self.currentLogin==current:
+			self.currentLogin = toPos
+		elif self.currentLogin<current and self.currentLogin>=toPos:
 			self.loginThread += 1
-		elif self.loginThread.curr>current and self.loginThread.curr<=toPos:
-			self.loginThread.curr -= 1
+		elif self.currentLogin>current and self.currentLogin<=toPos:
+			self.currentLogin -= 1
 		pbars=[]
 		tmp1 = self.table.takeTopLevelItem (current)
 		tmp2 = self.accounts.pop (current)
@@ -479,6 +437,9 @@ class MainWindow (QMainWindow):
 	def about (self): return
 
 	def quit (self):
+		self.loginTimer.stop()
+		self.quotaTimer.stop()
+		
 		conf = open ( os.getenv('HOME')+'/'+acc_file, 'w' )
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
@@ -487,20 +448,16 @@ class MainWindow (QMainWindow):
 			ciphertext = bz2.compress(temp)
 			temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
 			conf.write(temp)
-		
 		conf.close()
 		
 		conf = open(os.getenv('HOME')+'/'+conf_file,'w')
-		conf.write(str(self.settings.switch) + '\n')
+		conf.write(str(self.settings.switch_on_limit) + '\n')
 		conf.write(str(self.settings.switch_on_critical)+'\n')
 		conf.write(str(self.settings.update_quota_after)+'\n')
 		conf.write(str(self.settings.relogin_after)+'\n')
 		conf.write(str(self.settings.critical_quota_limit)+'\n')
-		conf.write(str(self.settings.autoSwitch)+'\n')
 		conf.close()
 		
-		self.loginTimer.stop()
-		self.quotaTimer.stop()
 		self.close()
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
