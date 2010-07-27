@@ -90,7 +90,7 @@ class MainWindow (QMainWindow):
 		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
 		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
-		quitAction = self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
+		quitAction = self.createAction ('Quit 	Ctrl+Q', self.quit, 'icons/application-exit.png', 'Quit SAM')
 		
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
@@ -134,10 +134,10 @@ class MainWindow (QMainWindow):
 		self.table.header().resizeSection (0, 160)
 
 		self.setCentralWidget (self.table)
-		self.setWindowIcon (QIcon('icons/cyberoam.png'))
+		self.setWindowIcon (QIcon('icons/logo.png'))
 		self.setWindowTitle ('Syberoam Account Manager')
 		self.tray = QSystemTrayIcon ()
-		self.tray.setIcon ( QIcon('icons/cyberoam.png') )
+		self.tray.setIcon ( QIcon('icons/logo.png') )
 		self.tray.show()
 		
 		try:
@@ -174,6 +174,12 @@ class MainWindow (QMainWindow):
 			conf.close()
 		except: pass
 		
+		exit = QAction(self)
+		print type(self)
+		exit.setShortcut('Ctrl+Q')
+		self.addAction(exit)
+
+		self.connect (exit,SIGNAL('triggered()'),QtGui.qApp,QtCore.SLOT('quit()'))	
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
@@ -183,6 +189,11 @@ class MainWindow (QMainWindow):
 		
 		for i in range( len(self.accounts) ):
 			self.getQuota (self.table.topLevelItem(i))
+
+	def closeEvent(self,event):
+		if self.isVisible():
+			self.hide()
+		event.ignore()
 
 	def updateUi (self, item, column):
 		if column==1:
@@ -369,7 +380,7 @@ class MainWindow (QMainWindow):
 		conf.write(str(self.settings.critical_quota_limit)+'\n')
 		conf.close()
 		
-		self.close()
+		qApp.quit()
 
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
