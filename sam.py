@@ -49,7 +49,18 @@ class Account ():
 			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
 			return False
 		return True
-
+	def logout (self):
+		try:
+			Cyberoam.logout(self.username+DOMAIN,self.passwd)
+		except Cyberoam.DataTransferLimitExceeded:
+			self.getQuota()
+			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Limit Reached')
+			return False
+		except Cyberoam.WrongPassword:
+			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
+			return False
+		return True
+	
 	def getQuota (self, acc_no=None):
 		if acc_no is None:
 			acc_no = self.parent.currentLogin
@@ -89,7 +100,7 @@ class MainWindow (QMainWindow):
 		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
 		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
-		quitAction = self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
+		quitAction = self.createAction ('Quit 	Ctrl+Q', self.quit, 'icons/application-exit.png', 'Quit SAM')
 		
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
@@ -141,12 +152,12 @@ class MainWindow (QMainWindow):
 		self.resize(498, self.size().height())
 		self.tray = QSystemTrayIcon ()
 		self.tray.setIcon ( QIcon('icons/logo.png') )
-		self.tray.show()
-		trayMenu = QMenu ()
-		trayMenu.addAction ( loginAction )
-		trayMenu.addAction ( quotaAction )
-		trayMenu.addAction ( quitAction )
-		self.tray.setContextMenu ( trayMenu )
+		self.tray.setVisible(True)
+		self.trayMenu = QMenu ()
+		self.trayMenu.addAction ( loginAction )
+		self.trayMenu.addAction ( quotaAction )
+		self.trayMenu.addAction ( quitAction )
+		self.tray.setContextMenu ( self.trayMenu )
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/'+acc_file, 'r' )
@@ -180,7 +191,13 @@ class MainWindow (QMainWindow):
 			self.settings.critical_quota_limit = float(pref[4])
 			conf.close()
 		except: pass
+		
+		exit = QAction(self)
+		print type(self)
+		exit.setShortcut('Ctrl+Q')
+		self.addAction(exit)
 
+		self.connect (exit,SIGNAL('triggered()'),qApp,SLOT('quit()'))	
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
@@ -249,14 +266,23 @@ class MainWindow (QMainWindow):
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 			if prev!=-1 and prev!=self.currentLogin and not switch:
-				self.table.topLevelItem (prev).setText (1, 'Logged out')
+				self.table.topLevelItem (prev).setText (1, 'Inactive')
 		else:
 			self.currentLogin = -1
 
 	def reLogin (self):
 		self.accounts[self.currentLogin].login
 
-	def logout (self): return
+	def logout (self):
+		print type(self.table)
+		
+ 		if self.currentLogin<0:
+			return None
+		item = self.table.topLevelItem(self.currentLogin)
+		if self.accounts[self.currentLogin].logout():
+			item.setText(1,'Logged out')
+			self.loginTimer.stop()
+			self.quotaTimer.stop()
 
 	def refreshQuota (self):
 		self.accounts[self.currentLogin].getQuota
