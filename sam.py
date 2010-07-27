@@ -48,21 +48,31 @@ class Account ():
 		except Cyberoam.WrongPassword:
 			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Wrong Password')
 			return False
+		except IOError:
+			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Network Error')
+			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
+			return False
 		return True
 
 	def logout (self):
-		self.getQuota (self.parent.currentLogin)
-		Cyberoam.logout (self.username+DOMAIN, self.passwd)
+		try:
+			self.getQuota (self.parent.currentLogin)
+			Cyberoam.logout (self.username+DOMAIN, self.passwd)
+		except IOError:
+			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 
 	def getQuota (self, acc_no=None):
-		if acc_no is None:
-			acc_no = self.parent.currentLogin
-		quota = Cyberoam.netUsage(self.username+DOMAIN, self.passwd)
-		self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
-		if self.parent.settings.switch_on_critical:
-			used=quota[0].split()
-			if used[1]=='MB' and float(used[0])>=self.parent.settings.critical_quota_limit:
-				self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
+		try:
+			if acc_no is None:
+				acc_no = self.parent.currentLogin
+			quota = Cyberoam.netUsage(self.username+DOMAIN, self.passwd)
+			self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
+			if self.parent.settings.switch_on_critical:
+				used=quota[0].split()
+				if used[1]=='MB' and float(used[0])>=self.parent.settings.critical_quota_limit:
+					self.parent.table.topLevelItem(acc_no).setText(1, 'Critical quota')
+		except IOError:
+			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 
 class MainWindow (QMainWindow):
 
@@ -204,7 +214,7 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(GREEN))
 			elif status == 'Logging in' or status == 'Logged out':
 				item.setIcon (0, QIcon(YELLOW))
-			elif status == 'Limit Reached' or status == 'Wrong Password' or status == 'Critical Quota':
+			else:
 				item.setIcon (0, QIcon(RED))
 				self.loginTimer.stop()
 				self.quotaTimer.stop()

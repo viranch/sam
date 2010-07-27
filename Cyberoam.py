@@ -15,7 +15,6 @@ cyberroamAddress = cyberroamIP
 if cyberroamPort != "":
 	cyberroamAddress = cyberroamAddress+":"+cyberroamPort
 
-class Timeout (Exception): pass
 class WrongPassword (Exception): pass
 class DataTransferLimitExceeded (Exception): pass
 
@@ -79,10 +78,7 @@ class MyCyberroamParser(sgmllib.SGMLParser):
 			return self.frames_attr[index]
 
 def login (username, passwd):
-	try:
-		f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
-	except IOError, (errno, strerror):
-		raise Timeout
+	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
 	s = f.read()
 	# Try and process the page.
 	# The class should have been defined first, remember.
@@ -103,9 +99,6 @@ def login (username, passwd):
 		raise DataTransferLimitExceeded
 
 def logout (username, passwd):
-	try:
-		f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=193&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&logout=Logout")
-	except IOError, (errno, strerror):
-		raise Timeout
+	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=193&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&logout=Logout")
 	s = f.read()
 	f.close()
