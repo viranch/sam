@@ -266,6 +266,7 @@ class MainWindow (QMainWindow):
 			conf.close()
 		except: pass
 		
+		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
@@ -459,6 +460,15 @@ class MainWindow (QMainWindow):
 		conf.close()
 		
 		self.close()
+
+	def toggleWindow (self, reason):
+		if reason == QSystemTrayIcon.Trigger:
+			if self.isVisible():
+				self.hide()
+			else:
+				self.show()
+		elif reason == QSystemTrayIcon.Context:
+			print 'show menu'
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
 		action = QAction (text, self)
