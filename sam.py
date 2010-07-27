@@ -12,6 +12,7 @@ from PyQt4.QtGui import *
 import bz2
 from prompt import *
 from settings import *
+from about import *
 
 DOMAIN = '@da-iict.org'
 GREEN = 'icons/ball-green.png'
@@ -342,7 +343,9 @@ class MainWindow (QMainWindow):
 		for i in range ( len(self.bars) ):
 			self.table.setItemWidget ( self.table.topLevelItem(i), 2, self.bars[i] )
 
-	def about (self): return
+	def about (self):
+		dlg = About()
+		dlg.exec_()
 
 	def quit (self):
 		self.loginTimer.stop()
