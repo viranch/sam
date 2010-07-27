@@ -26,13 +26,13 @@ class SettingsDlg (QDialog):
 		grid.addWidget (quotaIntervalLabel, 1, 0)
 		grid.addWidget (self.quotaSpin, 1, 1)
 		
-		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
+		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch to next account in the list')
 		self.autoSwitchCheck.setChecked (parent.settings.switch_on_critical or parent.settings.switch_on_limit)
 		
-		self.quotaSwitchCheck = QRadioButton ('Auto-switch when Data Transfer Limit exceeds', self)
+		self.quotaSwitchCheck = QRadioButton ('When Data Transfer Limit exceeds', self)
 		self.quotaSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		
-		self.criticalSwitchCheck = QRadioButton ('Auto-switch when usage reaches', self)
+		self.criticalSwitchCheck = QRadioButton ('When usage reaches', self)
 		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
@@ -42,14 +42,29 @@ class SettingsDlg (QDialog):
 		hbox = QHBoxLayout()
 		hbox.addWidget (self.criticalSwitchCheck)
 		hbox.addWidget (self.criticalSpin)
-		
+
+		self.balloonCheck = QCheckBox ( 'Show balloon-popup when usage reaches' )
+		self.balloonCheck.setChecked (parent.settings.balloon_popups)
+		self.balloonSpin = QDoubleSpinBox()
+		self.balloonSpin.setSuffix (' MB')
+		self.balloonSpin.setValue ( parent.settings.balloon_limit )
+		self.balloonSpin.setEnabled ( self.balloonCheck.isChecked() )
+		hbox_1 = QHBoxLayout()
+		hbox_1.addWidget (self.balloonCheck)
+		hbox_1.addWidget (self.balloonSpin)
+
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		vbox = QVBoxLayout()
 		vbox.addLayout (grid)
+		vbox.addWidget ( QLabel() )
+		vbox.addWidget ( QLabel() )
 		vbox.addWidget (self.autoSwitchCheck)
 		vbox.addWidget (self.quotaSwitchCheck)
 		vbox.addLayout (hbox)
+		vbox.addWidget ( QLabel() )
+		vbox.addWidget ( QLabel() )
+		vbox.addLayout ( hbox_1 )
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
@@ -57,6 +72,7 @@ class SettingsDlg (QDialog):
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
+		self.connect (self.balloonCheck, SIGNAL('toggled(bool)'), self.balloonSpin.setEnabled)
 		
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
 			self.quotaSwitchCheck.setChecked (True)
