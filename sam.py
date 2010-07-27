@@ -41,7 +41,6 @@ class Account ():
 	def login (self):
 		try:
 			Cyberoam.login (self.username+DOMAIN, self.passwd)
-			print
 		except Cyberoam.DataTransferLimitExceeded:
 			self.getQuota()
 			self.parent.table.topLevelItem(self.parent.currentLogin).setText (1, 'Limit Reached')
@@ -90,7 +89,7 @@ class MainWindow (QMainWindow):
 		bottomAction = self.createAction ('Bottom', self.bottom, 'icons/go-bottom.png', 'Move to bottom')
 		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
-		quitAction = self.createAction ('Quit 	Ctrl+Q', self.quit, 'icons/application-exit.png', 'Quit SAM')
+		quitAction = self.createAction ('Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
@@ -116,12 +115,15 @@ class MainWindow (QMainWindow):
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( loginAction )
 		self.toolbar.addAction ( quotaAction )
+		self.toolbar.addAction ( logoutAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( topAction )
 		self.toolbar.addAction ( upAction )
 		self.toolbar.addAction ( downAction )
 		self.toolbar.addAction ( bottomAction )
 		self.toolbar.addSeparator()
+		self.toolbar.addAction ( prefsAction )
+		self.toolbar.addAction ( aboutAction )
 		self.toolbar.addAction ( quitAction )
 
 		self.table = QTreeWidget ()
@@ -136,9 +138,15 @@ class MainWindow (QMainWindow):
 		self.setCentralWidget (self.table)
 		self.setWindowIcon (QIcon('icons/logo.png'))
 		self.setWindowTitle ('Syberoam Account Manager')
+		self.resize(498, self.size().height())
 		self.tray = QSystemTrayIcon ()
 		self.tray.setIcon ( QIcon('icons/logo.png') )
 		self.tray.show()
+		trayMenu = QMenu ()
+		trayMenu.addAction ( loginAction )
+		trayMenu.addAction ( quotaAction )
+		trayMenu.addAction ( quitAction )
+		self.tray.setContextMenu ( trayMenu )
 		
 		try:
 			conf = open ( os.getenv('HOME')+'/'+acc_file, 'r' )
@@ -156,30 +164,23 @@ class MainWindow (QMainWindow):
 				passwd = passwd[0:index]
 				self.addAccount(user,passwd)
 				i = i+2
+			conf.close()
 			conf = open(os.getenv('HOME')+'/'+conf_file,'r')
 			pref = conf.readlines()
-			if len(pref)==6:
-				if pref[0] == 'True\n':
-					self.settings.switch_on_limit = True
-				else:
-					self.settings.switch_on_limit = False
-				if pref[1]=='True\n':
-					self.settings.switch_on_critical = True
-				else:
-					self.settings.switch_on_critical = False
-			
-				self.settings.update_quota_after = int(pref[2])
-				self.settings.relogin_after = int(pref[3])
-				self.settings.critical_quota_limit = float(pref[4])
+			if 'True' in pref[0]:
+				self.settings.switch_on_limit = True
+			else:
+				self.settings.switch_on_limit = False
+			if 'True' in pref[1]:
+				self.settings.switch_on_critical = True
+			else:
+				self.settings.switch_on_critical = False
+			self.settings.update_quota_after = int(pref[2])
+			self.settings.relogin_after = int(pref[3])
+			self.settings.critical_quota_limit = float(pref[4])
 			conf.close()
 		except: pass
-		
-		exit = QAction(self)
-		print type(self)
-		exit.setShortcut('Ctrl+Q')
-		self.addAction(exit)
 
-		self.connect (exit,SIGNAL('triggered()'),QtGui.qApp,QtCore.SLOT('quit()'))	
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
@@ -190,7 +191,7 @@ class MainWindow (QMainWindow):
 		for i in range( len(self.accounts) ):
 			self.getQuota (self.table.topLevelItem(i))
 
-	def closeEvent(self,event):
+	def closeEvent(self, event):
 		if self.isVisible():
 			self.hide()
 		event.ignore()
@@ -390,6 +391,7 @@ class MainWindow (QMainWindow):
 				self.show()
 		elif reason == QSystemTrayIcon.Context:
 			print 'show menu'
+			self.tray.contextMenu().exec()
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
 		action = QAction (text, self)
