@@ -206,7 +206,7 @@ class MainWindow (QMainWindow):
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
 		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.refreshQuota )
 		#self.connect ( self.table, SIGNAL('itemActivated(QTreeWidgetItem*,int)'), self.login )
-		
+		self.show()
 		for i in range( len(self.accounts) ):
 			self.getQuota (self.table.topLevelItem(i))
 
