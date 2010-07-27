@@ -26,7 +26,8 @@ class Config ():
 	def __init__ (self):
 		self.switch_on_limit = False
 		self.switch_on_critical = False
-		self.balloon_popups = False
+		self.balloons = True
+		self.balloon_notify_critical = False
 		self.balloon_limit = 95.0 #MB
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
@@ -185,13 +186,17 @@ class MainWindow (QMainWindow):
 			else:
 				self.settings.switch_on_critical = False
 			if 'True' in pref[2]:
-				self.settings.balloon_popups = True
+				self.settings.balloon_notify_critical = True
 			else:
-				self.settings.balloon_popups = False
-			self.settings.update_quota_after = int(pref[3])
-			self.settings.relogin_after = int(pref[4])
-			self.settings.critical_quota_limit = float(pref[5])
-			self.settings.balloon_limit = float(pref[6])
+				self.settings.balloon_notify_critical = False
+			if 'True' in pref[3]:
+				self.settings.balloons = True
+			else:
+				self.settings.balloons = False
+			self.settings.update_quota_after = int(pref[4])
+			self.settings.relogin_after = int(pref[5])
+			self.settings.critical_quota_limit = float(pref[6])
+			self.settings.balloon_limit = float(pref[7])
 			conf.close()
 		except: pass
 		
@@ -215,12 +220,14 @@ class MainWindow (QMainWindow):
 			status = str(item.text(1))
 			if status == 'Logged in':
 				item.setIcon (0, QIcon(GREEN))
-			elif status == 'Logging in' or status == 'Logged out':
+				self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
+			elif status == 'Logged out':
 				item.setIcon (0, QIcon(YELLOW))
 			else:
 				item.setIcon (0, QIcon(RED))
 				self.loginTimer.stop()
 				self.quotaTimer.stop()
+				self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
 				if status=='Critical Quota' and self.settings.switch_on_critical:
 					self.switch()
 				elif status=='Limit Reached' and self.settings.switch_on_limit:
@@ -232,8 +239,10 @@ class MainWindow (QMainWindow):
 			self.table.itemWidget (item, 2).setValue(int(round(used)))
 			if str(item.text(3)) == '0.00 KB':
 				item.setText(1, 'Limit Reached')
+				self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+'Limit Reached')
 			elif self.settings.switch_on_critical and used>=self.settings.critical_quota_limit:
 				item.setText(1, 'Critical quota')
+				self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+'Critical quota')
 
 	def configure (self):
 		dlg = SettingsDlg(self)
@@ -244,9 +253,11 @@ class MainWindow (QMainWindow):
 			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
 			if self.settings.switch_on_critical:
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()
-			self.settings.balloon_popups = dlg.balloonCheck.isChecked()
-			if self.settings.balloon_popups:
-				self.settings.balloon_limit = dlg.balloonSpin.value()
+			self.settings.balloons = dlg.balloonPopups.isChecked()
+			if self.settings.balloons:
+				self.settings.balloon_notify_critical = dlg.balloonCheck.isChecked()
+				if self.settings.balloon_notify_critical:
+					self.settings.balloon_limit = dlg.balloonSpin.value()
 
 	def switch (self):
 		if not (self.settings.switch_on_limit or self.settings.switch_on_critical):
@@ -393,7 +404,8 @@ class MainWindow (QMainWindow):
 		conf = open(os.getenv('HOME')+'/'+conf_file,'w')
 		conf.write(str(self.settings.switch_on_limit) + '\n')
 		conf.write(str(self.settings.switch_on_critical)+'\n')
-		conf.write(str(self.settings.balloon_popups)+'\n')
+		conf.write(str(self.settings.balloon_notify_critical)+'\n')
+		conf.write(str(self.settings.balloons)+'\n')
 		conf.write(str(self.settings.update_quota_after)+'\n')
 		conf.write(str(self.settings.relogin_after)+'\n')
 		conf.write(str(self.settings.critical_quota_limit)+'\n')
@@ -405,8 +417,6 @@ class MainWindow (QMainWindow):
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
 			self.hide() if self.isVisible() else self.show()
-		elif reason == QSystemTrayIcon.Context:
-			print 'show menu'
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
 		action = QAction (text, self)

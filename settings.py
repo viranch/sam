@@ -31,24 +31,30 @@ class SettingsDlg (QDialog):
 		
 		self.quotaSwitchCheck = QRadioButton ('When Data Transfer Limit exceeds', self)
 		self.quotaSwitchCheck.setChecked (parent.settings.switch_on_critical)
+		self.quotaSwitchCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		
 		self.criticalSwitchCheck = QRadioButton ('When usage reaches', self)
 		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
+		self.criticalSwitchCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
 		self.criticalSpin.setValue (parent.settings.critical_quota_limit)
-		self.criticalSpin.setEnabled (self.criticalSwitchCheck.isChecked())
+		self.criticalSpin.setEnabled (self.criticalSwitchCheck.isChecked() and self.autoSwitchCheck.isChecked())
 		hbox = QHBoxLayout()
 		hbox.addWidget (self.criticalSwitchCheck)
 		hbox.addWidget (self.criticalSpin)
 
-		self.balloonCheck = QCheckBox ( 'Show balloon-popup when usage reaches' )
-		self.balloonCheck.setChecked (parent.settings.balloon_popups)
+		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
+		self.balloonPopups.setChecked ( parent.settings.balloons )
+
+		self.balloonCheck = QCheckBox ( 'Notify when usage reaches' )
+		self.balloonCheck.setChecked (parent.settings.balloon_notify_critical)
+		self.balloonCheck.setEnabled ( self.balloonPopups.isChecked() )
 		self.balloonSpin = QDoubleSpinBox()
 		self.balloonSpin.setSuffix (' MB')
 		self.balloonSpin.setValue ( parent.settings.balloon_limit )
-		self.balloonSpin.setEnabled ( self.balloonCheck.isChecked() )
+		self.balloonSpin.setEnabled ( self.balloonCheck.isChecked() and self.balloonPopups.isChecked() )
 		hbox_1 = QHBoxLayout()
 		hbox_1.addWidget (self.balloonCheck)
 		hbox_1.addWidget (self.balloonSpin)
@@ -64,21 +70,26 @@ class SettingsDlg (QDialog):
 		vbox.addLayout (hbox)
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( QLabel() )
+		vbox.addWidget ( self.balloonPopups )
 		vbox.addLayout ( hbox_1 )
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
-		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
+		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.box2)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
 		self.connect (self.balloonCheck, SIGNAL('toggled(bool)'), self.balloonSpin.setEnabled)
+		self.connect (self.balloonPopups, SIGNAL('toggled(bool)'), self.box3)
 		
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
 			self.quotaSwitchCheck.setChecked (True)
-		self.updateUi(self.autoSwitchCheck.isChecked())
 
-	def updateUi (self, state):
+	def box2 (self, state):
 		self.quotaSwitchCheck.setEnabled ( state )
 		self.criticalSwitchCheck.setEnabled ( state )
 		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
+
+	def box3 (self, state):
+		self.balloonCheck.setEnabled (state)
+		self.balloonSpin.setEnabled ( state and self.balloonCheck.isChecked() )
