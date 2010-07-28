@@ -26,7 +26,12 @@ def netUsage(username, passwd):
 	opener.addheaders = [('Referer','http://10.100.56.55:8090/myaccount.html')]
 	usock = opener.open(url, data)
 	the_page = usock.read()
+	f=open('log.txt','w')
+	f.write(the_page)
+	f.close()
 	start = the_page.find('Cycle Download Data Transfer')
+	if start<0:
+		raise WrongPassword
 	the_page = the_page[start:]
 	quota = []
 	for i in range (0, 3):
@@ -80,6 +85,7 @@ class MyCyberroamParser(sgmllib.SGMLParser):
 def login (username, passwd):
 	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
 	s = f.read()
+	open('log.txt', 'w').write(s)
 	# Try and process the page.
 	# The class should have been defined first, remember.
 	myparser = MyCyberroamParser()

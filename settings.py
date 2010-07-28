@@ -27,24 +27,32 @@ class SettingsDlg (QDialog):
 		grid.addWidget (self.quotaSpin, 1, 1)
 		
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch to next account in the list')
-		self.autoSwitchCheck.setChecked (parent.settings.switch_on_critical or parent.settings.switch_on_limit)
+		
+		self.usageCheck = QCheckBox ('When usage reaches')
+		self.usageCheck.setChecked (parent.settings.switch_on_critical or parent.settings.switch_on_limit)
 		
 		self.quotaSwitchCheck = QRadioButton ('When Data Transfer Limit exceeds', self)
 		self.quotaSwitchCheck.setChecked (parent.settings.switch_on_critical)
-		self.quotaSwitchCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		
 		self.criticalSwitchCheck = QRadioButton ('When usage reaches', self)
 		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
-		self.criticalSwitchCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
 		self.criticalSpin.setValue (parent.settings.critical_quota_limit)
-		self.criticalSpin.setEnabled (self.criticalSwitchCheck.isChecked() and self.autoSwitchCheck.isChecked())
 		hbox = QHBoxLayout()
 		hbox.addWidget (self.criticalSwitchCheck)
 		hbox.addWidget (self.criticalSpin)
 
+		self.wrongPassCheck = QCheckBox ('When wrong password encountered')
+		self.wrongPassCheck.setChecked (parent.settings.switch_on_wrongPass)
+		self.wrongPassCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
+		self.autoSwitchCheck.setChecked (self.usageCheck.isChecked() or self.wrongPassCheck.isChecked())
+		self.usageCheck.setEnabled (self.autoSwitchCheck.isChecked())
+		self.quotaSwitchCheck.setEnabled ( self.usageCheck.isChecked() and self.autoSwitchCheck.isChecked() )
+		self.criticalSwitchCheck.setEnabled ( self.usageCheck.isChecked() and self.autoSwitchCheck.isChecked() )
+		self.criticalSpin.setEnabled (self.criticalSwitchCheck.isChecked() and self.autoSwitchCheck.isChecked() and self.usageCheck.isChecked())
+		
 		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
 		self.balloonPopups.setChecked ( parent.settings.balloons )
 
@@ -66,8 +74,10 @@ class SettingsDlg (QDialog):
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget (self.autoSwitchCheck)
+		vbox.addWidget (self.usageCheck)
 		vbox.addWidget (self.quotaSwitchCheck)
 		vbox.addLayout (hbox)
+		vbox.addWidget (self.wrongPassCheck)
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( self.balloonPopups )
@@ -77,13 +87,20 @@ class SettingsDlg (QDialog):
 		
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
-		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.box2)
+		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.box1)
+		self.connect (self.usageCheck, SIGNAL('toggled(bool)'), self.box2)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
 		self.connect (self.balloonCheck, SIGNAL('toggled(bool)'), self.balloonSpin.setEnabled)
 		self.connect (self.balloonPopups, SIGNAL('toggled(bool)'), self.box3)
 		
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
 			self.quotaSwitchCheck.setChecked (True)
+			#self.usageCheck.setChecked (True)
+
+	def box1 (self, state):
+		self.usageCheck.setEnabled ( state )
+		self.box2 (state and self.usageCheck.isChecked())
+		self.wrongPassCheck.setEnabled ( state )
 
 	def box2 (self, state):
 		self.quotaSwitchCheck.setEnabled ( state )
