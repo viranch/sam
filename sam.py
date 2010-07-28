@@ -13,11 +13,12 @@ import bz2
 from prompt import *
 from settings import *
 from about import *
+import qrc_icon
 
 DOMAIN = '@da-iict.org'
-GREEN = 'icons/ball-green.png'
-RED = 'icons/ball-red.png'
-YELLOW = 'icons/ball-yellow.png'
+GREEN = ':/icons/ball-green.png'
+RED = ':/icons/ball-red.png'
+YELLOW = ':/icons/ball-yellow.png'
 acc_file = '.samacc.conf'
 conf_file = '.samconf.conf'
 
@@ -96,18 +97,18 @@ class MainWindow (QMainWindow):
 		self.status = self.statusBar()
 		self.status.setSizeGripEnabled (False)
 
-		loginAction = self.createAction ('Log &In', self.login, 'icons/network-connect.png', 'Log In')
-		logoutAction = self.createAction ('Log &Out', self.logout, 'icons/network-disconnect.png', 'Log Out')
-		quotaAction = self.createAction ('Get Usage', self.getQuota, 'icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
-		newUserAction = self.createAction ('&New...', self.addAccount, 'icons/user-add-icon.png', 'Create User', QKeySequence.New)
-		rmUserAction = self.createAction ('Remove', self.rmAccount, 'icons/user-remove-icon.png', 'Remove User', QKeySequence.Delete)
-		editUserAction = self.createAction ('&Edit...', self.editAccount, 'icons/user-icon.png', 'Edit User')
-		clearAction = self.createAction ('&Clear All', self.clearList, 'icons/edit-clear-list.png', 'Clear Users list')
-		upAction = self.createAction ('Up', self.up, 'icons/up-icon.png', 'Move up')
-		downAction = self.createAction ('Down', self.down, 'icons/down-icon.png', 'Move down')
-		prefsAction = self.createAction ('&Configure SAM', self.configure, 'icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
-		aboutAction = self.createAction ('&About SAM', self.about, 'icons/help-about.png', 'About SAM')
-		quitAction = self.createAction ('&Quit', self.quit, 'icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
+		loginAction = self.createAction ('Log &In', self.login, ':/icons/network-connect.png', 'Log In')
+		logoutAction = self.createAction ('Log &Out', self.logout, ':/icons/network-disconnect.png', 'Log Out')
+		quotaAction = self.createAction ('Get Usage', self.getQuota, ':/icons/view-refresh.png', 'Refresh Quota', QKeySequence.Refresh)
+		newUserAction = self.createAction ('&New...', self.addAccount, ':/icons/user-add-icon.png', 'Create User', QKeySequence.New)
+		rmUserAction = self.createAction ('Remove', self.rmAccount, ':/icons/user-remove-icon.png', 'Remove User', QKeySequence.Delete)
+		editUserAction = self.createAction ('&Edit...', self.editAccount, ':/icons/user-icon.png', 'Edit User')
+		clearAction = self.createAction ('&Clear All', self.clearList, ':/icons/edit-clear-list.png', 'Clear Users list')
+		upAction = self.createAction ('Up', self.up, ':/icons/up-icon.png', 'Move up')
+		downAction = self.createAction ('Down', self.down, ':/icons/down-icon.png', 'Move down')
+		prefsAction = self.createAction ('&Configure SAM', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
+		aboutAction = self.createAction ('&About SAM', self.about, ':/icons/help-about.png', 'About SAM')
+		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
@@ -151,11 +152,11 @@ class MainWindow (QMainWindow):
 		self.table.header().resizeSection (0, 160)
 
 		self.setCentralWidget (self.table)
-		self.setWindowIcon (QIcon('icons/logo.png'))
+		self.setWindowIcon (QIcon(':/icons/logo.png'))
 		self.setWindowTitle ('SAM - Syberoam Account Manager')
 		self.resize(498, self.size().height())
 		self.tray = QSystemTrayIcon ()
-		self.tray.setIcon ( QIcon('icons/logo.png') )
+		self.tray.setIcon ( QIcon(':/icons/logo.png') )
 		self.tray.setVisible(True)
 		self.trayMenu = QMenu ()
 		self.trayMenu.addAction ( loginAction )
@@ -325,14 +326,14 @@ class MainWindow (QMainWindow):
 				new.setText (1, '')
 		else:
 			dlg = Prompt(self)
-			dlg.setWindowIcon (QIcon('icons/list-add-user.png'))
+			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
 			if dlg.exec_():
 				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()))
 
 	def editAccount (self):
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
 		dlg = Prompt(self, self.accounts[current].username)
-		dlg.setWindowIcon (QIcon('icons/user-properties.png'))
+		dlg.setWindowIcon (QIcon(':/icons/user-properties.png'))
 		if dlg.exec_():
 			self.table.currentItem().setText (0, dlg.unameEdit.text())
 			self.accounts[current].username = str(dlg.unameEdit.text())
