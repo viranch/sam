@@ -69,6 +69,7 @@ class Account ():
 			if acc_no is None:
 				acc_no = self.parent.currentLogin
 			quota = Cyberoam.netUsage(self.username+DOMAIN, self.passwd)
+		#	print quota[1]
 			self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
 		except IOError:
 			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
@@ -281,10 +282,18 @@ class MainWindow (QMainWindow):
 			item.setText (1, 'Logged in')
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
+			self.table.setCurrentItem(item)
+		#	print switch
 			if prev!=-1 and prev!=self.currentLogin and not switch:
-				self.table.topLevelItem (prev).setText (1, 'Logged out')
+		#		print 'afdkjfsda'
+				if not self.table.topLevelItem(prev).text(1) == 'Wrong Password':
+					self.table.topLevelItem (prev).setText (1, 'Logged out')
 		else:
-			self.currentLogin = -1
+			if self.currentLogin+1 < len(self.accounts):
+				temp = self.table.itemBelow(item)
+				self.login(temp,column,switch)
+			else:
+				self.currentLogin = -1
 
 	def reLogin (self):
 		self.accounts[self.currentLogin].login
@@ -318,6 +327,7 @@ class MainWindow (QMainWindow):
 			self.table.addTopLevelItem ( new )
 			self.bars.append( QProgressBar() )
 			self.bars[-1].setRange (0, 102400)
+			self.bars[-1].setValue (0)
 			self.table.setItemWidget (new, 2, self.bars[-1])
 			self.accounts.append ( Account(self, uid, pwd) )
 			self.status.showMessage (uid+' added', 5000)
@@ -368,8 +378,14 @@ class MainWindow (QMainWindow):
 		if current == bound:
 			return None
 		self.currentLogin += to
-		tmp1 = self.table.takeTopLevelItem (current)
+
+		tmp1 = self.table.takeTopLevelItem (current)		
 		tmp2 = self.accounts.pop (current)
+
+		bar1 = self.bars[current].value()
+		self.bars[current].setValue(self.bars[current+to].value())
+		self.bars[current+to].setValue(bar1)
+
 		self.table.insertTopLevelItem ( current+to, tmp1 )
 		self.accounts.insert ( current+to, tmp2 )
 		self.table.setCurrentItem ( self.table.topLevelItem(current+to) )
@@ -380,9 +396,12 @@ class MainWindow (QMainWindow):
 	def down (self): self.move (1)
 
 	def updateBars (self):
-		for i in range ( len(self.bars) ):
-			self.table.setItemWidget ( self.table.topLevelItem(i), 2, self.bars[i] )
-
+		for i in range(0,len(self.bars)):
+			tmp = self.bars[i].value()
+			self.bars[i] = QProgressBar()
+			self.bars[i].setRange(0,102400)
+			self.bars[i].setValue(tmp)
+			self.table.setItemWidget(self.table.topLevelItem(i),2,self.bars[i])
 	def about (self):
 		dlg = About()
 		dlg.exec_()
