@@ -46,8 +46,8 @@ class SettingsDlg (QDialog):
 
 		self.wrongPassCheck = QCheckBox ('When wrong password encountered')
 		self.wrongPassCheck.setChecked (parent.settings.switch_on_wrongPass)
-		self.wrongPassCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		self.autoSwitchCheck.setChecked (self.usageCheck.isChecked() or self.wrongPassCheck.isChecked())
+		self.wrongPassCheck.setEnabled ( self.autoSwitchCheck.isChecked() )
 		self.usageCheck.setEnabled (self.autoSwitchCheck.isChecked())
 		self.quotaSwitchCheck.setEnabled ( self.usageCheck.isChecked() and self.autoSwitchCheck.isChecked() )
 		self.criticalSwitchCheck.setEnabled ( self.usageCheck.isChecked() and self.autoSwitchCheck.isChecked() )
