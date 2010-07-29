@@ -1,2 +1,4 @@
 TODO List:
 
+1. [Bug] self.currentLogin erroniously gets set to -1 when login is attempted on account whose transfer limit has been exceeded.
+
