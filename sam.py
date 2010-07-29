@@ -73,6 +73,9 @@ class Account ():
 			self.parent.table.topLevelItem(acc_no).setText (1, 'Checking usage')
 			quota = Cyberoam.netUsage (self.username+DOMAIN, self.passwd)
 			self.parent.table.topLevelItem(acc_no).setText (3, quota[1])
+			if '0.00 KB' in quota[1]:
+				self.parent.table.topLevelItem(acc_no).setText(1, 'Limit Reached')
+				return False
 			return True
 		except Cyberoam.WrongPassword:
 			self.parent.table.topLevelItem(acc_no).setText (1, 'Wrong Password')
@@ -106,6 +109,8 @@ class MainWindow (QMainWindow):
 		clearAction = self.createAction ('&Clear All', self.clearList, ':/icons/edit-clear-list.png', 'Clear Users list')
 		upAction = self.createAction ('Up', self.up, ':/icons/up-icon.png', 'Move up')
 		downAction = self.createAction ('Down', self.down, ':/icons/down-icon.png', 'Move down')
+		balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
+		balloonAction.setChecked (self.settings.balloons)
 		prefsAction = self.createAction ('&Configure SAM', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		aboutAction = self.createAction ('&About SAM', self.about, ':/icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
@@ -124,6 +129,7 @@ class MainWindow (QMainWindow):
 		actionsMenu.addAction (quotaAction)
 		actionsMenu.addAction (logoutAction)
 		settingsMenu = menubar.addMenu ('&Settings')
+		settingsMenu.addAction (balloonAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
 		helpMenu.addAction (aboutAction)
@@ -159,6 +165,8 @@ class MainWindow (QMainWindow):
 		self.tray.setIcon ( QIcon(':/icons/logo.png') )
 		self.tray.setVisible(True)
 		self.trayMenu = QMenu ()
+		self.trayMenu.addAction ( balloonAction )
+		self.trayMenu.addSeparator()
 		self.trayMenu.addAction ( loginAction )
 		self.trayMenu.addAction ( quotaAction )
 		self.trayMenu.addAction ( logoutAction )
@@ -171,7 +179,6 @@ class MainWindow (QMainWindow):
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
 		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.refreshQuota )
-		#self.connect ( self.table, SIGNAL('itemActivated(QTreeWidgetItem*,int)'), self.login )
 
 	def readConfs (self):
 		try:
@@ -208,6 +215,9 @@ class MainWindow (QMainWindow):
 			conf.close()
 		except: pass
 
+	def setBalloon (self):
+		self.settings.balloons = not self.settings.balloons
+
 	def closeEvent(self, event):
 		if self.isVisible():
 			self.hide()
@@ -230,18 +240,16 @@ class MainWindow (QMainWindow):
 				if self.settings.balloons:
 					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
 				if status=='Critical Quota' and self.settings.switch_on_critical:
-					self.switch()
+					self.switch(2)
 				elif status=='Limit Reached' and self.settings.switch_on_limit:
-					self.switch()
+					self.switch(1)
 		elif column == 3:
 			quota = str(item.text(3)).split()
 			rem = float(quota[0]) if quota[1] is 'KB' else float(quota[0])*1024
 			used = 102400 - rem
 			self.bars[self.table.indexOfTopLevelItem(item)][1] = int(round(used))
 			self.table.itemWidget (item, 2).setValue(int(round(used)))
-			if str(item.text(3)) == '0.00 KB':
-				item.setText(1, 'Limit Reached')
-			elif self.settings.switch_on_critical and used>=self.settings.critical_quota_limit:
+			if self.settings.switch_on_critical and used>=self.settings.critical_quota_limit:
 				item.setText(1, 'Critical quota')
 
 	def configure (self):
@@ -259,12 +267,13 @@ class MainWindow (QMainWindow):
 			if self.settings.balloon_notify_critical:
 				self.settings.balloon_limit = dlg.balloonSpin.value()
 
-	def switch (self):
+	def switch (self, _from=0):
 		if not (self.settings.switch_on_limit or self.settings.switch_on_critical):
 			return None
 		next = self.table.topLevelItem (self.currentLogin+1)
 		if next is not None:
-			self.logout ()
+			if _from == 2: #Critical quota
+				self.logout ()
 			self.login ( next, 0, True )
 
 	def login (self, item=None, column=-1, switch=False):
@@ -294,7 +303,7 @@ class MainWindow (QMainWindow):
  		if acc_no<0:
 			return None
 		if self.accounts[acc_no].logout():
-			self.table.topLevelItem(acc_no).setText (1,'Logged out')
+			self.table.topLevelItem(acc_no).setText (1, 'Logged out')
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
 		self.currentLogin = -1
