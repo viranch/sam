@@ -36,7 +36,10 @@ def netUsage(username, passwd):
 		the_page = the_page[start+53:]
 		end = the_page.find('</')
 		quota.append (the_page[:end])
-	return quota[-2:]
+	quota = quota[-2:]
+	if '0.00 KB' in quota[1]:
+		raise DataTransferLimitExceeded
+	return quota
 
 class MyCyberroamParser(sgmllib.SGMLParser):
 	"A simple parser class."
