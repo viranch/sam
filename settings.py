@@ -39,7 +39,7 @@ class SettingsDlg (QDialog):
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
-		self.criticalSpin.setValue (parent.settings.critical_quota_limit)
+		self.criticalSpin.setValue (parent.settings.critical_quota_limit/1024)
 		hbox = QHBoxLayout()
 		hbox.addWidget (self.criticalSwitchCheck)
 		hbox.addWidget (self.criticalSpin)
@@ -56,17 +56,6 @@ class SettingsDlg (QDialog):
 		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
 		self.balloonPopups.setChecked ( parent.settings.balloons )
 
-		self.balloonCheck = QCheckBox ( 'Notify when usage reaches' )
-		self.balloonCheck.setChecked (parent.settings.balloon_notify_critical)
-		self.balloonCheck.setEnabled ( self.balloonPopups.isChecked() )
-		self.balloonSpin = QDoubleSpinBox()
-		self.balloonSpin.setSuffix (' MB')
-		self.balloonSpin.setValue ( parent.settings.balloon_limit )
-		self.balloonSpin.setEnabled ( self.balloonCheck.isChecked() and self.balloonPopups.isChecked() )
-		hbox_1 = QHBoxLayout()
-		hbox_1.addWidget (self.balloonCheck)
-		hbox_1.addWidget (self.balloonSpin)
-
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		vbox = QVBoxLayout()
@@ -81,7 +70,6 @@ class SettingsDlg (QDialog):
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( self.balloonPopups )
-		vbox.addLayout ( hbox_1 )
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
@@ -90,12 +78,9 @@ class SettingsDlg (QDialog):
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.box1)
 		self.connect (self.usageCheck, SIGNAL('toggled(bool)'), self.box2)
 		self.connect (self.criticalSwitchCheck, SIGNAL('toggled(bool)'), self.criticalSpin.setEnabled)
-		self.connect (self.balloonCheck, SIGNAL('toggled(bool)'), self.balloonSpin.setEnabled)
-		self.connect (self.balloonPopups, SIGNAL('toggled(bool)'), self.box3)
 		
 		if not self.quotaSwitchCheck.isChecked() and not self.criticalSwitchCheck.isChecked():
 			self.quotaSwitchCheck.setChecked (True)
-			#self.usageCheck.setChecked (True)
 
 	def box1 (self, state):
 		self.usageCheck.setEnabled ( state )
@@ -107,6 +92,3 @@ class SettingsDlg (QDialog):
 		self.criticalSwitchCheck.setEnabled ( state )
 		self.criticalSpin.setEnabled ( self.criticalSwitchCheck.isChecked() and state )
 
-	def box3 (self, state):
-		self.balloonCheck.setEnabled (state)
-		self.balloonSpin.setEnabled ( state and self.balloonCheck.isChecked() )
