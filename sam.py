@@ -261,6 +261,10 @@ class MainWindow (QMainWindow):
 		if dlg.exec_():
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
+			self.loginTimer.stop()
+			self.quotaTimer.stop()
+			self.loginTimer.start ( self.settings.relogin_after*1000 )
+			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 			self.settings.switch_on_limit = dlg.quotaSwitchCheck.isChecked() and dlg.usageCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
 			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked() and dlg.usageCheck.isChecked() and  dlg.autoSwitchCheck.isChecked()
 			self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
