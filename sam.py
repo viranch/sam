@@ -308,7 +308,7 @@ class MainWindow (QMainWindow):
 				self.currentLogin = -1
 		elif c == 2 and self.settings.switch_on_wrongPass and curr!=len(self.accounts)-1:
 			self.switch( self.table.topLevelItem(curr+1) )
-		elif c == 1 and selfsettings.switch_on_limit and curr!=len(self.accounts)-1:
+		elif c == 1 and self.settings.switch_on_limit and curr!=len(self.accounts)-1:
 			self.switch( self.table.topLevelItem(curr+1) )
 		else:
 			self.loginTimer.stop()
