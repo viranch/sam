@@ -19,8 +19,15 @@ DOMAIN = '@da-iict.org'
 GREEN = ':/icons/ball-green.png'
 RED = ':/icons/ball-red.png'
 YELLOW = ':/icons/ball-yellow.png'
+
 acc_file = '.samacc.conf'
 conf_file = '.samconf.conf'
+if 'win' in sys.platform:
+	acc_file = os.getenv('appdata')+'\\'+acc_file
+	conf_file = os.getenv('appdata')+'\\'+conf_file
+else:
+	acc_file = os.getenv('HOME')+'/'+acc_file
+	conf_file = os.getenv('HOME')+'/'+conf_file
 
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error'][err_code]
@@ -138,6 +145,7 @@ class MainWindow (QMainWindow):
 		helpMenu.addAction (aboutAction)
 		
 		self.toolbar.addAction ( newUserAction )
+		self.toolbar.addAction ( editUserAction )
 		self.toolbar.addAction ( rmUserAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( loginAction )
@@ -185,7 +193,7 @@ class MainWindow (QMainWindow):
 
 	def readConfs (self):
 		try:
-			conf = open(os.getenv('HOME')+'/'+conf_file,'r')
+			conf = open(conf_file,'r')
 			pref = conf.readlines()
 			
 			bools = pref[0]
@@ -199,7 +207,7 @@ class MainWindow (QMainWindow):
 			self.settings.critical_quota_limit = float(pref[3])
 			conf.close()
 			
-			conf = open ( os.getenv('HOME')+'/'+acc_file, 'r' )
+			conf = open ( acc_file, 'r' )
 			accounts = conf.read()
 			conf.close()
 			toks = accounts.split('\n\n\n',1)
@@ -461,7 +469,7 @@ class MainWindow (QMainWindow):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
 		
-		conf = open ( os.getenv('HOME')+'/'+acc_file, 'w' )
+		conf = open ( acc_file, 'w' )
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
@@ -471,7 +479,7 @@ class MainWindow (QMainWindow):
 			conf.write(temp)
 		conf.close()
 		
-		conf = open(os.getenv('HOME')+'/'+conf_file,'w')
+		conf = open(conf_file,'w')
 		conf.write (str(int(self.settings.switch_on_limit)))
 		conf.write (str(int(self.settings.switch_on_critical)))
 		conf.write (str(int(self.settings.switch_on_wrongPass)))
