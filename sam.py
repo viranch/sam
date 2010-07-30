@@ -54,17 +54,13 @@ class Account ():
 
 	def login (self):
 		try:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Logging in')
 			Cyberoam.login (self.username+DOMAIN, self.passwd)
 			return 0
 		except Cyberoam.DataTransferLimitExceeded:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Limit Reached')
 			return 1
 		except Cyberoam.WrongPassword:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Wrong Password')
 			return 2
 		except IOError:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Network Error')
 			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 			return 3
 
@@ -78,19 +74,15 @@ class Account ():
 
 	def getQuota (self):
 		try:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Checking usage')
 			quota = Cyberoam.netUsage (self.username+DOMAIN, self.passwd)
-			#self.parent.table.topLevelItem(self.acc_no).setText (3, quota[1])
 			return 0, quota
 		except Cyberoam.DataTransferLimitExceeded:
 			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Limit Reached')
 			#self.parent.table.topLevelItem(self.acc_no).setText (3, '0.00 KB')
 			return 1, None
 		except Cyberoam.WrongPassword:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Wrong Password')
 			return 2, None
 		except IOError:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Network Error')
 			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 			return 3, None
 
@@ -245,24 +237,14 @@ class MainWindow (QMainWindow):
 					item.setIcon (0, QIcon(YELLOW))
 			else:
 				item.setIcon (0, QIcon(RED))
-				#self.loginTimer.stop()
-				#self.quotaTimer.stop()
 				if self.settings.balloons:
 					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
-				#if status=='Critical Quota' and self.settings.switch_on_critical:
-					#self.switch(2)
-				#elif status=='Limit Reached' and (self.settings.switch_on_limit or self.settings.switch_on_critical):
-					#self.switch(1)
-				#else:
-					#self.currentLogin = -1
 		elif column == 3:
 			quota = str(item.text(3)).split()
 			rem = float(quota[0]) if quota[1] == 'KB' else float(quota[0])*1024
 			used = 102400 - rem
 			self.bars[self.table.indexOfTopLevelItem(item)][1] = int(round(used))
 			self.table.itemWidget (item, 2).setValue(int(round(used)))
-			#if self.settings.switch_on_critical and used>=self.settings.critical_quota_limit and rem>0:
-				#item.setText(1, 'Critical quota')
 
 	def configure (self):
 		dlg = SettingsDlg(self)
