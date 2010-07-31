@@ -12,6 +12,7 @@ from PyQt4.QtGui import *
 import bz2
 from prompt import *
 from settings import *
+from update import *
 from about import *
 import qrc_icon
 
@@ -114,7 +115,8 @@ class MainWindow (QMainWindow):
 		downAction = self.createAction ('Down', self.down, ':/icons/down-icon.png', 'Move down')
 		balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
 		balloonAction.setChecked (self.settings.balloons)
-		prefsAction = self.createAction ('&Configure SAM', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
+		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
+		updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
 		aboutAction = self.createAction ('&About SAM', self.about, ':/icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
@@ -135,6 +137,7 @@ class MainWindow (QMainWindow):
 		settingsMenu.addAction (balloonAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
+		helpMenu.addAction (updateAction)
 		helpMenu.addAction (aboutAction)
 		
 		self.toolbar.addAction ( newUserAction )
@@ -149,6 +152,7 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( downAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( prefsAction )
+		self.toolbar.addAction ( updateAction )
 		self.toolbar.addAction ( aboutAction )
 		self.toolbar.addAction ( quitAction )
 
@@ -444,6 +448,24 @@ class MainWindow (QMainWindow):
 			self.bars[i][0].setValue(self.bars[i][1])
 			self.table.setItemWidget(self.table.topLevelItem(i),2,self.bars[i][0])
 			self.accounts[i].acc_no = i
+
+	def update (self):
+		o = Updater(self, self.settings.rev)
+		o.t.start()
+		if o.exec_():
+			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
+			ls = os.listdir ( path )
+			for item in ls:
+				if item[-4:]=='.tmp':
+					os.remove ( path+os.sep+item[:-4] )
+					os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
+			self.settings.rev = o.rev
+		else:
+			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
+			ls = os.listdir ( path )
+			for item in ls:
+				if item[-4:]=='.tmp':
+					os.remove ( path+os.sep+item )
 
 	def about (self):
 		dlg = About()

@@ -1,4 +1,5 @@
 import sys
+import os
 import urllib2
 import feedparser
 from PyQt4.QtCore import *
@@ -6,9 +7,11 @@ from PyQt4.QtGui import *
 
 class Updater (QDialog):
 
-	def __init__ (self, parent=None):
+	def __init__ (self, parent, rev):
 		super (Updater, self).__init__(parent)
 		self.rss = 'http://bitbucket.org/viranch/sam/rss'
+		self.rev = rev
+		self.update_rev = ''
 
 		vbox = QVBoxLayout()
 		self.status = QLabel('')
@@ -21,7 +24,6 @@ class Updater (QDialog):
 		self.connect ( buttonBox, SIGNAL('rejected()'), self.slot )
 
 		self.t = upThread(self)
-		self.t.start()
 
 	def slot (self):
 		if self.t.isRunning():
@@ -38,12 +40,7 @@ class upThread (QThread):
 
 	def run (self):
 		self.parent.status.setText ('Updating...')
-		try:
-			c=open('rev.conf', 'r')
-			curr_rev = c.read()
-			c.close()
-		except:
-			curr_rev=''
+		curr_rev = self.parent.rev
 		f = feedparser.parse (self.rss)
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
@@ -66,16 +63,10 @@ class upThread (QThread):
 					continue
 				self.parent.status.setText ('Downloading '+name+'...')
 				u = urllib2.urlopen ( link )
-				out = open(name, 'w')
+				path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
+				out = open(path, 'w')
 				out.write ( u.read() )
 				out.close()
-#			if raw_input('write to conf? [y/N]').lower() == 'y':
-#				c=open('rev.conf', 'w')
-#				c.write(rev)
-#				c.close()
+			self.parent.rev = rev
 			self.parent.status.setText ('Done')
 		else: self.parent.status.setText ('Up-to-date')
-
-app = QApplication(sys.argv)
-dlg = Updater()
-dlg.exec_()
