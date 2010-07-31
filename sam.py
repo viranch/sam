@@ -42,6 +42,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
+		self.rev = '1b6af81a699f'
 		self.DOMAIN = '@da-iict.org'
 
 class Account ():
@@ -197,6 +198,7 @@ class MainWindow (QMainWindow):
 			self.settings.update_quota_after = int(pref[1])
 			self.settings.relogin_after = int(pref[2])
 			self.settings.critical_quota_limit = float(pref[3])
+			self.settings.rev = pref[4].replace('\n','')
 			conf.close()
 			
 			conf = open ( acc_file, 'r' )
@@ -469,6 +471,7 @@ class MainWindow (QMainWindow):
 		conf.write (str(self.settings.update_quota_after)+'\n')
 		conf.write (str(self.settings.relogin_after)+'\n')
 		conf.write (str(self.settings.critical_quota_limit)+'\n')
+		conf.write (self.settings.rev+'\n')
 		conf.close()
 		
 		qApp.quit()
