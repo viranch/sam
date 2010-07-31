@@ -44,14 +44,12 @@ class upThread (QThread):
 			c.close()
 		except:
 			curr_rev=''
-#		self.labels[0].setText ('Updating...')
 		f = feedparser.parse (self.rss)
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
 		except IndexError:
 			self.parent.status.setText ('Error')
 		if rev!=curr_rev:
-			self.parent.status.setText ( 'Downloading updates...' )
 			update_list = []
 			content = f.entries[-1]['summary_detail']['value']
 			while True:
@@ -66,11 +64,11 @@ class upThread (QThread):
 				name = link.split('/')[-1]
 				if 'TODO'==name:
 					continue
+				self.parent.status.setText ('Downloading '+name+'...')
 				u = urllib2.urlopen ( link )
 				out = open(name, 'w')
 				out.write ( u.read() )
 				out.close()
-#				self.labels[ctr].setText (name)
 #			if raw_input('write to conf? [y/N]').lower() == 'y':
 #				c=open('rev.conf', 'w')
 #				c.write(rev)
@@ -78,11 +76,6 @@ class upThread (QThread):
 			self.parent.status.setText ('Done')
 		else: self.parent.status.setText ('Up-to-date')
 
-#	def appendLabel (self, text):
-#		self.vbox.addWidget ( QLabel(text) )
-#		self.setLayout (self.vbox)
-#		self.show()
-
 app = QApplication(sys.argv)
 dlg = Updater()
-print dlg.exec_()
+dlg.exec_()
