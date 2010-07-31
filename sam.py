@@ -336,9 +336,11 @@ class MainWindow (QMainWindow):
 		self.currentLogin = -1
 
 	def refreshQuota (self):
+		print 'Fucj you'
 		self.getQuota( self.table.topLevelItem(self.currentLogin) )
 
 	def getQuota (self, item=None):
+		print "ACDFG"
 		if item is None:
 			item = self.table.currentItem()
 		curr = self.table.indexOfTopLevelItem ( item )
