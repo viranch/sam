@@ -458,8 +458,10 @@ class MainWindow (QMainWindow):
 			ls = os.listdir ( path )
 			for item in ls:
 				if item[-4:]=='.tmp':
-					os.remove ( path+os.sep+item[:-4] )
-					os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
+					try:
+						os.remove ( path+os.sep+item[:-4] )
+						os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
+					except: pass
 			self.settings.rev = o.rev
 		else:
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
