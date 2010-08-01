@@ -43,8 +43,8 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
-		self.rev = '1b6af81a699f'
-		self.DOMAIN = '@da-iict.org'
+		self.rev = ''
+		self.DOMAIN = DOMAIN
 
 class Account ():
 
