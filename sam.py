@@ -245,6 +245,8 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(RED))
 				if self.settings.balloons:
 					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
+				if status=='Limit Reached':
+					item.setText (3, '0.00 KB')
 		elif column == 3:
 			quota = str(item.text(3)).split()
 			rem = float(quota[0]) if quota[1] == 'KB' else float(quota[0])*1024
