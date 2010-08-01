@@ -28,7 +28,7 @@ class Updater (QDialog):
 		if os.access ( path, os.W_OK ):
 			self.t.start()
 		else:
-			self.status.setText ('Start SAM in super-user\nmode to update it.')
+			self.status.setText ('You do not have apprppriate\npermissions to update SAM.')
 
 	def slot (self):
 		if self.t.isRunning():
@@ -72,8 +72,6 @@ class upThread (QThread):
 				out = open(path, 'w')
 				out.write ( u.read() )
 				out.close()
-				if name=='sam.py':
-					os.chmod (path, 64)
 			self.parent.rev = rev
 			self.parent.status.setText ('Done')
 		else: self.parent.status.setText ('Up-to-date')
