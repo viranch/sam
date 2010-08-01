@@ -1,6 +1,6 @@
 #!/bin/bash
 mkdir $HOME/.sam
-mv *.py $HOME/.sam/
-mv *.pyw $HOME/.sam/
-mv sam /usr/bin/
+cp *.py $HOME/.sam/
+cp *.pyw $HOME/.sam/
+cp sam /usr/bin/
 echo "Successful."
