@@ -1,0 +1,22 @@
+Insalltion:
+====================
+
+1) On LINUX Platforms:
+	Run the following commands:
+
+	$ cd path/to/source
+	$ sudo ./install.sh
+
+	SAM is ready to use! Just issue following in terminal:
+	$ sam
+
+2) On Windows Platform:
+	Just run the setup.exe
+	SAM is ready to use by invoking from desktop shortcut.
+
+Report Bugs:
+=====================
+
+Viranch Mehta <viranch.mehta@gmail.com>
+Mohit Kothari <mohitrajkothari@gmail.com>
+
