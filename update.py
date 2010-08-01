@@ -24,6 +24,11 @@ class Updater (QDialog):
 		self.connect ( buttonBox, SIGNAL('rejected()'), self.slot )
 
 		self.t = upThread(self)
+		path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
+		if os.access ( path, os.W_OK ):
+			self.t.start()
+		else:
+			self.status.setText ('Start SAM in super-user\nmode to update it.')
 
 	def slot (self):
 		if self.t.isRunning():

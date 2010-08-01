@@ -338,11 +338,9 @@ class MainWindow (QMainWindow):
 		self.currentLogin = -1
 
 	def refreshQuota (self):
-		print 'Fucj you'
 		self.getQuota( self.table.topLevelItem(self.currentLogin) )
 
 	def getQuota (self, item=None):
-		print "ACDFG"
 		if item is None:
 			item = self.table.currentItem()
 		curr = self.table.indexOfTopLevelItem ( item )
@@ -455,7 +453,6 @@ class MainWindow (QMainWindow):
 
 	def update (self):
 		o = Updater(self, self.settings.rev)
-		o.t.start()
 		if o.exec_():
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
 			ls = os.listdir ( path )
