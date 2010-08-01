@@ -47,31 +47,56 @@ class upThread (QThread):
 		self.parent.status.setText ('Updating...')
 		curr_rev = self.parent.rev
 		f = feedparser.parse (self.rss)
+		update_list = []
+		
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
-		except IndexError:
-			self.parent.status.setText ('Error')
-		if rev!=curr_rev:
-			update_list = []
-			content = f.entries[-1]['summary_detail']['value']
-			while True:
-				start = content.find('http://')
-				if start<0:
-					break
-				content = content[start:]
-				end = content.find('\"')
-				update_list.append ( content[:end].replace('src', 'raw') )
-				content = content[end:]
-			for link in update_list:
-				name = link.split('/')[-1]
-				if 'TODO'==name or 'install.sh'==name:
-					continue
-				self.parent.status.setText ('Downloading '+name+'...')
-				u = urllib2.urlopen ( link )
-				path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
-				out = open(path, 'w')
-				out.write ( u.read() )
-				out.close()
-			self.parent.rev = rev
+		except KeyError:
+			self.parent.setText ('Error')
+			return None
+		
+		for en in f.entries[::-1]:
+			if en.link.split('/')[-1] == curr_rev:
+				break
+			tmp_list = self.parse_contents (en)
+			ctr = 0
+			for i in range ( len(tmp_list) ):
+				name = tmp_list[i].split('/')[-1]
+				flag = False
+				for link in update_list:
+					if name == link.split('/')[-1]:
+						flag = True
+						break
+				if not flag:
+					update_list.insert (ctr, tmp_list[i])
+					ctr += 1
+		
+		for link in update_list:
+			name = link.split('/')[-1]
+			if 'TODO'==name or 'install.sh'==name:
+				continue
+			self.parent.status.setText ('Downloading '+name+'...')
+			u = urllib2.urlopen ( link )
+			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
+			out = open(path, 'w')
+			out.write ( u.read() )
+			out.close()
+		self.parent.rev = rev
+		
+		if len(update_list)==0:
+			self.parent.status.setText ('Up-to-date')
+		else:
 			self.parent.status.setText ('Done')
-		else: self.parent.status.setText ('Up-to-date')
+
+	def parse_contents (self, en):
+		content = en['summary_detail']['value']
+		up_list = []
+		while True:
+			start = content.find('http://')
+			if start<0:
+				break
+			content = content[start:]
+			end = content.find('\"')
+			up_list.append ( content[:end].replace('/src/', '/raw/') )
+			content = content[end:]
+		return up_list
