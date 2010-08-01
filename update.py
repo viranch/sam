@@ -72,6 +72,7 @@ class upThread (QThread):
 				out = open(path, 'w')
 				out.write ( u.read() )
 				out.close()
+				os.chmod (path, 64)
 			self.parent.rev = rev
 			self.parent.status.setText ('Done')
 		else: self.parent.status.setText ('Up-to-date')
