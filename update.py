@@ -64,7 +64,7 @@ class upThread (QThread):
 				content = content[end:]
 			for link in update_list:
 				name = link.split('/')[-1]
-				if 'TODO'==name:
+				if 'TODO'==name or 'install.sh'==name:
 					continue
 				self.parent.status.setText ('Downloading '+name+'...')
 				u = urllib2.urlopen ( link )
