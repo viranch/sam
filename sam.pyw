@@ -460,8 +460,8 @@ class MainWindow (QMainWindow):
 				if item[-4:]=='.tmp':
 					try:
 						os.remove ( path+os.sep+item[:-4] )
-						os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
 					except: pass
+					os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
 			self.settings.rev = o.rev
 		else:
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])

@@ -73,10 +73,13 @@ class upThread (QThread):
 		
 		for link in update_list:
 			name = link.split('/')[-1]
-			if 'TODO'==name or 'install.sh'==name:
+			if 'TODO'==name or 'install.sh'==name or 'sam'==name:
 				continue
 			self.parent.status.setText ('Downloading '+name+'...')
-			u = urllib2.urlopen ( link )
+			try:
+				u = urllib2.urlopen ( link )
+			except urllib2.HTTPError:
+				continue
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
 			out = open(path, 'w')
 			out.write ( u.read() )
