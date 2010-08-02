@@ -1,3 +1,8 @@
 #!/bin/bash
-
-$HOME/.sam/sam.pyw
+SERVICE='sam'
+if ps ax | grep -v grep | grep $SERVICE > /dev/null
+then
+	echo" SAM ALREADY RUNNING!"
+else
+	$HOME/.sam/sam.pyw
+fi
