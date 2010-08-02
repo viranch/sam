@@ -36,6 +36,7 @@ def get_err ( err_code ):
 class Config ():
 
 	def __init__ (self):
+		self.auto_login = True
 		self.switch_on_limit = False
 		self.switch_on_critical = False
 		self.switch_on_wrongPass = False
@@ -194,10 +195,11 @@ class MainWindow (QMainWindow):
 			pref = conf.readlines()
 			
 			bools = pref[0]
-			self.settings.switch_on_limit = bool(int(bools[0]))
-			self.settings.switch_on_critical = bool(int(bools[1]))
-			self.settings.switch_on_wrongPass = bool(int(bools[2]))
-			self.settings.balloons = bool(int(bools[3]))
+			self.settings.auto_login = bool(int(bools[0]))
+			self.settings.switch_on_limit = bool(int(bools[1]))
+			self.settings.switch_on_critical = bool(int(bools[2]))
+			self.settings.switch_on_wrongPass = bool(int(bools[3]))
+			self.settings.balloons = bool(int(bools[4]))
 			
 			self.settings.update_quota_after = int(pref[1])
 			self.settings.relogin_after = int(pref[2])
@@ -257,6 +259,7 @@ class MainWindow (QMainWindow):
 	def configure (self):
 		dlg = SettingsDlg(self)
 		if dlg.exec_():
+			self.settings.auto_login = dlg.autoLogin.isChecked()
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
 			self.loginTimer.stop()
@@ -489,6 +492,7 @@ class MainWindow (QMainWindow):
 		conf.close()
 		
 		conf = open(conf_file,'w')
+		conf.write (str(int(self.settings.auto_login)))
 		conf.write (str(int(self.settings.switch_on_limit)))
 		conf.write (str(int(self.settings.switch_on_critical)))
 		conf.write (str(int(self.settings.switch_on_wrongPass)))

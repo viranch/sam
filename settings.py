@@ -7,6 +7,9 @@ class SettingsDlg (QDialog):
 		super (SettingsDlg, self).__init__(parent)
 		self.parent = parent
 		self.setWindowTitle ('Preferences')
+
+		self.autoLogin = QCheckBox ('Auto login on startup')
+		self.autoLogin.setChecked (parent.settings.auto_login)
 		
 		loginIntervalLabel = QLabel ('Re-login after every:')
 		self.loginSpin = QSpinBox ()
@@ -59,6 +62,8 @@ class SettingsDlg (QDialog):
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		vbox = QVBoxLayout()
+		vbox.addWidget (self.autoLogin)
+		vbox.addWidget ( QLabel() )
 		vbox.addLayout (grid)
 		vbox.addWidget ( QLabel() )
 		vbox.addWidget ( QLabel() )
