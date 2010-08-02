@@ -2,6 +2,9 @@ Insalltion:
 ====================
 
 1) On LINUX Platforms:
+	Get the source code from http://bitbucket.org/viranch/sam or clone the repo:
+	$ hg clone http://bitbucket.org/viranch/sam
+
 	Run the following commands:
 
 	$ cd path/to/source
