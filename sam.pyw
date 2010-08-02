@@ -183,6 +183,7 @@ class MainWindow (QMainWindow):
 		self.trayMenu.addAction ( quitAction )
 		self.tray.setContextMenu ( self.trayMenu )
 		
+		
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )
@@ -223,6 +224,9 @@ class MainWindow (QMainWindow):
 				self.addAccount(user,passwd)
 				i = i+2
 			conf.close()
+			if self.settings.auto_login == True:
+				self.login()
+
 		except: pass
 
 	def setBalloon (self):
@@ -284,6 +288,9 @@ class MainWindow (QMainWindow):
 	def login (self, item=None, column=-1, switch=False):
 		if item is None:
 			item = self.table.currentItem()
+			if item is None:
+				item = self.table.itemAt(0,0)
+				self.table.setCurrentItem(item)
 		elif switch:
 			self.table.setCurrentItem (item)
 		item.setText (1, 'Logging in')
@@ -327,6 +334,7 @@ class MainWindow (QMainWindow):
 			self.currentLogin = -1
 
 	def reLogin (self):
+
 		self.login (self.table.topLevelItem(self.currentLogin))
 
 	def logout (self, acc_no=None):
