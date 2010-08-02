@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
-		self.rev = ''
+		self.rev = 'f6abbcac84b3'
 		self.DOMAIN = DOMAIN
 
 class Account ():
@@ -118,7 +118,7 @@ class MainWindow (QMainWindow):
 		balloonAction.setChecked (self.settings.balloons)
 		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
-		aboutAction = self.createAction ('&About SAM', self.about, ':/icons/help-about.png', 'About SAM')
+		aboutAction = self.createAction ('&About', self.about, ':/icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
 		menubar = self.menuBar()
