@@ -315,7 +315,8 @@ class MainWindow (QMainWindow):
 					self.loginTimer.stop()
 					self.quotaTimer.stop()
 				self.loginTimer.start ( self.settings.relogin_after*1000 )
-				self.quotaTimer.start ( self.settings.update_quota_after*1000 )
+				if not self.quotaTimer.isActive():
+					self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 				if prev!=-1 and prev!=curr and not switch:
 					self.table.topLevelItem (prev).setText (1, 'Logged out')
 			elif _c==1 and self.settings.switch_on_limit and curr!=len(self.accounts)-1:
