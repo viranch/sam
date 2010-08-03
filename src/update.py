@@ -31,7 +31,7 @@ class Updater (QDialog):
 			self.status.setText ('You do not have apprppriate\npermissions to update SAM.')
 
 	def slot (self):
-		if self.t.isRunning():
+		if self.t.isRunning() or self.status.text()=='Error':
 			self.reject()
 		else:
 			self.accept()
@@ -79,7 +79,8 @@ class upThread (QThread):
 			try:
 				u = urllib2.urlopen ( link )
 			except urllib2.HTTPError:
-				continue
+				self.parent.setText ('Error')
+				return None
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
 			out = open(path, 'w')
 			out.write ( u.read() )
@@ -100,6 +101,6 @@ class upThread (QThread):
 				break
 			content = content[start:]
 			end = content.find('\"')
-			up_list.append ( content[:end].replace('/src/', '/raw/') )
+			up_list.append ( content[:end].replace('/sam/src/', '/sam/raw/') )
 			content = content[end:]
 		return up_list
