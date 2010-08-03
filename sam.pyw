@@ -47,7 +47,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0 #MB
-		self.rev = 'f6abbcac84b3'
+		self.rev = '92c17276de7d'
 		self.DOMAIN = DOMAIN
 
 class Account ():

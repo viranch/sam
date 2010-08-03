@@ -73,7 +73,7 @@ class upThread (QThread):
 		
 		for link in update_list:
 			name = link.split('/')[-1]
-			if name in ['TODO', 'install.sh', 'sam', 'setup.exe']:
+			if name in ['TODO', 'install.sh', 'sam', 'logo.png']:
 				continue
 			self.parent.status.setText ('Downloading '+name+'...')
 			try:
