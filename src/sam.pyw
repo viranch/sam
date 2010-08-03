@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 #
-# Author: Viranch Mehta <viranch.mehta@gmail.com>
+# Authors: 	Viranch Mehta <viranch.mehta@gmail.com>
+#			Mohit Kothari <mohitrajkothari@gmail.com>
 #
+# Source Website: 	http://www.bitbucket.org/viranch/sam
 
 import sys
 import time
