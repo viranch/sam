@@ -208,7 +208,7 @@ class MainWindow (QMainWindow):
 			self.settings.rev = pref[4].replace('\n','')
 			conf.close()
 			
-			conf = open ( acc_file, 'r' )
+			conf = open ( acc_file, 'rb' )
 			accounts = conf.read()
 			conf.close()
 			toks = accounts.split('\n\n\n',1)
@@ -490,7 +490,7 @@ class MainWindow (QMainWindow):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
 		
-		conf = open ( acc_file, 'w' )
+		conf = open ( acc_file, 'wb' )
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
 		for ac in self.accounts:
