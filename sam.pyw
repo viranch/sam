@@ -23,12 +23,15 @@ YELLOW = ':/icons/ball-yellow.png'
 
 acc_file = '.samacc.conf'
 conf_file = '.samconf.conf'
+lck_file = 'sam.lck'
 if 'win' in sys.platform:
 	acc_file = os.getenv('appdata')+'\\'+acc_file
 	conf_file = os.getenv('appdata')+'\\'+conf_file
+	lck_file = os.getenv('appdata')+'\\'+lck_file
 else:
 	acc_file = os.getenv('HOME')+'/'+acc_file
 	conf_file = os.getenv('HOME')+'/'+conf_file
+	lck_file = os.getenv('HOME')+'/'+lck_file
 
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error'][err_code]
@@ -192,6 +195,8 @@ class MainWindow (QMainWindow):
 
 	def readConfs (self):
 		try:
+			lck = open(lck_file, 'w')
+			lck.close()
 			conf = open(conf_file,'r')
 			pref = conf.readlines()
 			
@@ -512,6 +517,7 @@ class MainWindow (QMainWindow):
 		conf.write (self.settings.rev+'\n')
 		conf.close()
 		
+		os.remove (lck_file)
 		qApp.quit()
 
 	def toggleWindow (self, reason):
@@ -535,7 +541,10 @@ class MainWindow (QMainWindow):
 
 if __name__=='__main__':
 	app = QApplication (sys.argv)
-	window = MainWindow()
-	window.show()
-	window.readConfs()
-	app.exec_()
+	if not os.access (lck_file, os.F_OK):
+		window = MainWindow()
+		window.show()
+		window.readConfs()
+		app.exec_()
+	else:
+		QMessageBox.critical (None, 'Error', 'SAM is already running.\n\nIf you\'re sure SAM is not running,\ntry deleting the following file:\n'+lck_file)

@@ -34,10 +34,10 @@ class SettingsDlg (QDialog):
 		self.usageCheck = QCheckBox ('When usage reaches')
 		self.usageCheck.setChecked (parent.settings.switch_on_critical or parent.settings.switch_on_limit)
 		
-		self.quotaSwitchCheck = QRadioButton ('When Data Transfer Limit exceeds', self)
+		self.quotaSwitchCheck = QRadioButton ('Data Transfer Limit', self)
 		self.quotaSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		
-		self.criticalSwitchCheck = QRadioButton ('When usage reaches', self)
+		self.criticalSwitchCheck = QRadioButton ('Critical quota:', self)
 		self.criticalSwitchCheck.setChecked (parent.settings.switch_on_critical)
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
