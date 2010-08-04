@@ -48,7 +48,7 @@ class upThread (QThread):
 		curr_rev = self.parent.rev
 		f = feedparser.parse (self.rss)
 		update_list = []
-		
+
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
 		except KeyError:
