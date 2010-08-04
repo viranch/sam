@@ -52,7 +52,7 @@ class upThread (QThread):
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
 		except KeyError:
-			self.parent.setText ('Error')
+			self.parent.status.setText ('Error')
 			return None
 		
 		for en in f.entries[::-1]:
