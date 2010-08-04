@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import qrc_icon
 from PyQt4.QtGui import *
 from PyQt4.QtCore import *

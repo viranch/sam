@@ -79,7 +79,7 @@ class upThread (QThread):
 			try:
 				u = urllib2.urlopen ( link )
 			except urllib2.HTTPError:
-				self.parent.setText ('Error')
+				self.parent.status.setText ('Error')
 				return None
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])+os.sep+name+'.tmp'
 			out = open(path, 'w')
@@ -103,4 +103,14 @@ class upThread (QThread):
 			end = content.find('\"')
 			up_list.append ( content[:end].replace('/sam/src/', '/sam/raw/') )
 			content = content[end:]
+
+		rm_list = []
+		for i in range( len(up_list) ):
+			name = up_list[i].split('/')[-1]
+			for j in range (i+1, len(up_list)):
+				if name == up_list[j].split('/')[-1]:
+					rm_list.append(i)
+		for i in rm_list:
+			up_list.pop(i)
+
 		return up_list

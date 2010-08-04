@@ -5,7 +5,7 @@ class Prompt (QDialog):
 
 	def __init__(self, parent=None, uid=None):
 		super (Prompt, self).__init__(parent)
-		
+
 		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 		unameLabel = QLabel ('Username:')
 		suffLabel = QLabel (parent.settings.DOMAIN)

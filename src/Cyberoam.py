@@ -85,6 +85,7 @@ class MyCyberroamParser(sgmllib.SGMLParser):
 def login (username, passwd):
 	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
 	s = f.read()
+
 	# Try and process the page.
 	# The class should have been defined first, remember.
 	myparser = MyCyberroamParser()
