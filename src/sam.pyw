@@ -25,7 +25,7 @@ YELLOW = ':/icons/ball-yellow.png'
 
 acc_file = '.samacc.conf'
 conf_file = '.samconf.conf'
-lck_file = 'sam.lck'
+lck_file = '.sam.lck'
 if 'win' in sys.platform:
 	acc_file = os.getenv('appdata')+'\\'+acc_file
 	conf_file = os.getenv('appdata')+'\\'+conf_file
@@ -519,7 +519,9 @@ class MainWindow (QMainWindow):
 		conf.write (self.settings.rev+'\n')
 		conf.close()
 		
-		os.remove (lck_file)
+		try:
+			os.remove (lck_file)
+		except: pass
 		qApp.quit()
 
 	def toggleWindow (self, reason):
