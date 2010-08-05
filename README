@@ -2,8 +2,12 @@ Insalltion:
 ====================
 
 1) On LINUX Platforms:
+	Make sure you have python and pyqt packages instlled before proceeding.
+
 	Get the source code from http://bitbucket.org/viranch/sam or clone the repo:
 	$ hg clone http://bitbucket.org/viranch/sam
+	Note: if the above command doesn't work, you need to install the package mercurial,
+	otherwise get the code from the above link.
 
 	Run the following commands:
 
@@ -13,9 +17,12 @@ Insalltion:
 	SAM is ready to use! Just issue following in terminal:
 	$ sam
 
+	(Sorry, SAM doesn't currently add shortcuts to the Kicker menu)
+
 2) On Windows Platform:
+	Contact the authors to get the windows installer. (It's free too)
 	Just run the setup.exe
-	SAM is ready to use by invoking from desktop shortcut.
+	SAM is ready to use by invoking from desktop shortcut or start-menu shortcut.
 
 Report Bugs:
 =====================
