@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Authors: 	Viranch Mehta <viranch.mehta@gmail.com>
+# Authors: 		Viranch Mehta <viranch.mehta@gmail.com>
 #			Mohit Kothari <mohitrajkothari@gmail.com>
 #
 # Source Website: 	http://www.bitbucket.org/viranch/sam
@@ -195,7 +195,8 @@ class MainWindow (QMainWindow):
 
 	def readConfs (self):
 		try:
-			lck = open(lck_file, 'w')
+			lck = open(lck_file, 'wb')
+			lck.write ( str(os.getpid()) )
 			lck.close()
 			conf = open(conf_file,'r')
 			pref = conf.readlines()
@@ -229,7 +230,7 @@ class MainWindow (QMainWindow):
 				self.addAccount(user,passwd)
 				i = i+2
 			conf.close()
-			if self.settings.auto_login == True:
+			if self.settings.auto_login == True and len(self.accounts)>0:
 				self.login()
 
 		except: pass
@@ -529,12 +530,22 @@ class MainWindow (QMainWindow):
 			action.setCheckable (True)
 		return action
 
-if __name__=='__main__':
+def main():
 	app = QApplication (sys.argv)
+	window = MainWindow()
+	window.show()
+	window.readConfs()
+	app.exec_()
+
+if __name__=='__main__':
 	if not os.access (lck_file, os.F_OK):
-		window = MainWindow()
-		window.show()
-		window.readConfs()
-		app.exec_()
+		main()
 	else:
-		QMessageBox.critical (None, 'Error', 'SAM is already running.\n\nIf you\'re sure SAM is not running,\ntry deleting the following file:\n'+lck_file)
+		app = QApplication (sys.argv)
+		b = QMessageBox.question (None, 'SAM', 'SAM seems to be already running.\nAre you sure SAM is not running?', QMessageBox.Yes, QMessageBox.No)
+		if b==QMessageBox.Yes:
+			pid = int ( open(lck_file, 'rb').read() )
+			try:
+				os.kill (pid, 3)
+			except: pass
+			main()
