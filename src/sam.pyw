@@ -85,8 +85,6 @@ class Account ():
 			quota = Cyberoam.netUsage (self.username+DOMAIN, self.passwd)
 			return 0, quota
 		except Cyberoam.DataTransferLimitExceeded:
-			#self.parent.table.topLevelItem(self.acc_no).setText (1, 'Limit Reached')
-			#self.parent.table.topLevelItem(self.acc_no).setText (3, '0.00 KB')
 			return 1, None
 		except Cyberoam.WrongPassword:
 			return 2, None
@@ -310,28 +308,15 @@ class MainWindow (QMainWindow):
 		if c == 0:
 			self.currentLogin = curr
 			_c, quota = self.accounts[curr].getQuota()
-			if _c==0:
-				if self.settings.switch_on_critical:
-					q = quota[0].split()
-					used = float(q[0])*1024 if 'MB' in q[1] else float(q[0])
-					if used>=self.settings.critical_quota_limit:
-						item.setText (1, 'Critical usage')
-						self.switch ()
-						return None
+			if self.getQuota ( item ): # if getQuota() did not perform a switch
 				if switch:
 					self.loginTimer.stop()
 					self.quotaTimer.stop()
 				self.loginTimer.start ( self.settings.relogin_after*1000 )
 				if not self.quotaTimer.isActive():
 					self.quotaTimer.start ( self.settings.update_quota_after*1000 )
-				if prev!=-1 and prev!=curr and not switch:
-					self.table.topLevelItem (prev).setText (1, 'Logged out')
-			elif _c==1 and self.settings.switch_on_limit and curr!=len(self.accounts)-1:
-				self.switch( self.table.topLevelItem(curr+1) )
-			else:
-				self.loginTimer.stop()
-				self.quotaTimer.stop()
-				self.currentLogin = -1
+			if prev!=-1 and prev!=curr and not switch:
+				self.table.topLevelItem (prev).setText (1, 'Logged out')
 		elif c == 2 and self.settings.switch_on_wrongPass and curr!=len(self.accounts)-1:
 			self.switch( self.table.topLevelItem(curr+1) )
 		elif c == 1 and self.settings.switch_on_limit and curr!=len(self.accounts)-1:
@@ -342,7 +327,6 @@ class MainWindow (QMainWindow):
 			self.currentLogin = -1
 
 	def reLogin (self):
-
 		self.login (self.table.topLevelItem(self.currentLogin))
 
 	def logout (self, acc_no=None):
@@ -366,24 +350,26 @@ class MainWindow (QMainWindow):
 		c, quota = self.accounts[curr].getQuota()
 		if c==0:
 			item.setText (3, quota[1])
-			if curr!=self.currentLogin:
-				item.setText (1, '')
 			if self.settings.switch_on_critical:
 				q = quota[0].split()
 				used = float(q[0])*1024 if 'MB' in q[1] else float(q[0])
 				if used>=self.settings.critical_quota_limit:
 					item.setText (1, 'Critical usage')
-					if curr==self.currentLogin:
+					if curr==self.currentLogin and self.currentLogin<len(self.accounts)-1:
 						self.switch ()
+						return False
+			return True
 		elif c<3:
 			item.setText (1, get_err(c))
 			if curr==self.currentLogin:
 				if (c==1 and self.settings.switch_on_limit) or (c==2 and self.settings.switch_on_wrongPass):
-					self.switch()
-				#else:
-					#self.currentLogin=-1
+					if self.currentLogin != len(self.accounts)-1:
+						self.switch()
+					else:
+						self.currentLogin=-1
 		else:
 			item.setText (1, get_err(c))
+		return False
 
 	def addAccount (self, uid=None, pwd=None):
 		if uid is not None and pwd is not None:
