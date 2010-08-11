@@ -48,6 +48,7 @@ class upThread (QThread):
 		curr_rev = self.parent.rev
 		f = feedparser.parse (self.rss)
 		update_list = []
+		file_list = []
 
 		try:
 			rev = f.entries[-1].link.split('/')[-1]
@@ -58,17 +59,12 @@ class upThread (QThread):
 		for en in f.entries[::-1]:
 			if en.link.split('/')[-1] == curr_rev:
 				break
-			tmp_list = self.parse_contents (en)
+			tmp_list, name_list = self.parse_contents (en)
 			ctr = 0
-			for i in range ( len(tmp_list) ):
-				name = tmp_list[i].split('/')[-1]
-				flag = False
-				for link in update_list:
-					if name == link.split('/')[-1]:
-						flag = True
-						break
-				if not flag:
-					update_list.insert (ctr, tmp_list[i])
+			for i in range ( len(name_list) ):
+				if name_list[i] not in file_list:
+					update_list.insert (ctr, tmp_list[i] )
+					file_list.append ( name_list[i] )
 					ctr += 1
 		
 		for link in update_list:
@@ -95,22 +91,18 @@ class upThread (QThread):
 	def parse_contents (self, en):
 		content = en['summary_detail']['value']
 		up_list = []
+		names = []
 		while True:
 			start = content.find('http://')
 			if start<0:
 				break
 			content = content[start:]
 			end = content.find('\"')
-			up_list.append ( content[:end].replace('/sam/src/', '/sam/raw/') )
+			link = content[:end].replace('/sam/src/', '/sam/raw/')
+			name = link.split('/')[-1]
+			if name not in names:
+				names.append ( name )
+				up_list.append ( link )
 			content = content[end:]
 
-		rm_list = []
-		for i in range( len(up_list) ):
-			name = up_list[i].split('/')[-1]
-			for j in range (i+1, len(up_list)):
-				if name == up_list[j].split('/')[-1]:
-					rm_list.append(i)
-		for i in rm_list:
-			up_list.pop(i)
-
-		return up_list
+		return up_list, names
