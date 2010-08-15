@@ -31,10 +31,10 @@ if 'win' in sys.platform:
 	conf_file = os.getenv('appdata')+'\\'+conf_file
 	lck_file = os.getenv('appdata')+'\\'+lck_file
 else:
-	acc_file = os.getenv('HOME')+'/'+acc_file
-	conf_file = os.getenv('HOME')+'/'+conf_file
-	lck_file = os.getenv('HOME')+'/'+lck_file
-
+	acc_file = os.getenv('HOME')+'/.sam/'+acc_file
+	conf_file = os.getenv('HOME')+'/.sam/'+conf_file
+	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
+	print acc_file
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error'][err_code]
 
@@ -374,6 +374,7 @@ class MainWindow (QMainWindow):
 
 	def addAccount (self, uid=None, pwd=None):
 		if uid is not None and pwd is not None:
+			print uid
 			new = QTreeWidgetItem ([uid, '', '', ''])
 			new.setIcon (0, QIcon(YELLOW))
 			self.table.addTopLevelItem ( new )
