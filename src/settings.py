@@ -47,11 +47,13 @@ class SettingsDlg (QDialog):
 		#autoSwitch CheckBox
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
 		self.autoSwitchCheck.setChecked (parent.settings.auto_switch)
+		self.autoSwitchCheck.setToolTip ('Enable/Disable auto-switching to next account in list,\nif any error is encountered\n(wrong password or data transfer limit exceeds)')
 
 		#hbox
 		self.criticalCheck = QCheckBox ('Switch when usage reaches:')
 		self.criticalCheck.setChecked (parent.settings.switch_on_critical and parent.settings.auto_switch)
 		self.criticalCheck.setEnabled (self.autoSwitchCheck.isChecked())
+		self.criticalCheck.setToolTip ('This will switch to next account if the\nspecified usage is reached.')
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)

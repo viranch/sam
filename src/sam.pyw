@@ -215,7 +215,9 @@ class MainWindow (QMainWindow):
 			self.settings.critical_quota_limit = float(pref[3])
 			toks = pref[4].split(':')
 			self.settings.server = toks[0]
+			Cyberoam.cyberroamIP = toks[0]
 			self.settings.port = toks[1]
+			Cyberoam.cyberroamPort = toks[1]
 			self.settings.rev = pref[5].replace('\n','')
 			conf.close()
 			
@@ -304,8 +306,6 @@ class MainWindow (QMainWindow):
 			self.login ( to, -1, True )
 
 	def login (self, item=None, column=-1, switch=False):
-		if switch:
-			print 'switch'
 		if item is None:
 			item = self.table.currentItem()
 			if item is None:
