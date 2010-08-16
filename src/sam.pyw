@@ -19,6 +19,7 @@ from about import *
 import qrc_icon
 
 DOMAIN = '@da-iict.org'
+
 GREEN = ':/icons/ball-green.png'
 RED = ':/icons/ball-red.png'
 YELLOW = ':/icons/ball-yellow.png'
@@ -34,7 +35,7 @@ else:
 	acc_file = os.getenv('HOME')+'/.sam/'+acc_file
 	conf_file = os.getenv('HOME')+'/.sam/'+conf_file
 	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
-	print acc_file
+
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error'][err_code]
 
