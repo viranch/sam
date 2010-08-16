@@ -11,15 +11,18 @@ import cookielib
 import urllib2
 import urllib, sgmllib, time
 
-cyberroamAddress = cyberroamIP
-if cyberroamPort != "":
-	cyberroamAddress = cyberroamAddress+":"+cyberroamPort
+def cyberroamAddress():
+	add = cyberroamIP
+	if cyberroamPort != "":
+		add += ":"+cyberroamPort
+	return add
 
 class WrongPassword (Exception): pass
 class DataTransferLimitExceeded (Exception): pass
+class MultipleLoginError (Exception): pass
 
 def netUsage(username, passwd):
-	url = "http://"+cyberroamAddress+"/corporate/servlet/MyAccountManager"
+	url = "http://"+cyberroamAddress()+"/corporate/servlet/MyAccountManager"
 	data = "mode=1&login_username=&secretkey=&js_autodetect_results=SMPREF_JS_OFF&just_logged_in=1&username="+username+"&password="+passwd+"&select=My+Account&soft_25.x=0&soft_25.y=0"
 	cj = cookielib.CookieJar()
 	opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
@@ -83,7 +86,7 @@ class MyCyberroamParser(sgmllib.SGMLParser):
 			return self.frames_attr[index]
 
 def login (username, passwd):
-	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
+	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
 	s = f.read()
 
 	# Try and process the page.
@@ -103,8 +106,10 @@ def login (username, passwd):
 		raise WrongPassword
 	if message == "DataTransfer limit has been exceeded":
 		raise DataTransferLimitExceeded
+	if message == "Multiple login not allowed":
+		raise MultipleLoginError
 
 def logout (username, passwd):
-	f = urllib.urlopen("http://"+cyberroamAddress+"/corporate/servlet/CyberoamHTTPClient","mode=193&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&logout=Logout")
+	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=193&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&logout=Logout")
 	s = f.read()
 	f.close()

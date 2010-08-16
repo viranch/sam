@@ -6,16 +6,11 @@
 # Source Website: 	http://www.bitbucket.org/viranch/sam
 
 import sys
-import time
 import os
 import Cyberoam
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import bz2
-from prompt import *
-from settings import *
-from update import *
-from about import *
 import qrc_icon
 
 DOMAIN = '@da-iict.org'
@@ -37,20 +32,21 @@ else:
 	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
 
 def get_err ( err_code ):
-	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error'][err_code]
+	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error', 'Account in use'][err_code]
 
 class Config ():
 
 	def __init__ (self):
 		self.auto_login = True
-		self.switch_on_limit = False
+		self.auto_switch = True
 		self.switch_on_critical = False
-		self.switch_on_wrongPass = False
 		self.balloons = True
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
-		self.critical_quota_limit = 95.0 #MB
-		self.rev = '92c17276de7d'
+		self.critical_quota_limit = 95.0*1024 #KB = 95MB
+		self.rev = 'e1e1bfd30e3b'
+		self.server = '10.100.56.55'
+		self.port = '8090'
 		self.DOMAIN = DOMAIN
 
 class Account ():
@@ -69,6 +65,8 @@ class Account ():
 			return 1
 		except Cyberoam.WrongPassword:
 			return 2
+		except Cyberoam.MultipleLoginError:
+			return 4
 		except IOError:
 			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 			return 3
@@ -107,7 +105,6 @@ class MainWindow (QMainWindow):
 
 		self.toolbar = self.addToolBar ('Toolbar')
 		self.status = self.statusBar()
-		self.status.setSizeGripEnabled (False)
 
 		loginAction = self.createAction ('Log &In', self.login, ':/icons/network-connect.png', 'Log In')
 		logoutAction = self.createAction ('Log &Out', self.logout, ':/icons/network-disconnect.png', 'Log Out')
@@ -118,8 +115,10 @@ class MainWindow (QMainWindow):
 		clearAction = self.createAction ('&Clear All', self.clearList, ':/icons/edit-clear-list.png', 'Clear Users list')
 		upAction = self.createAction ('Up', self.up, ':/icons/up-icon.png', 'Move up')
 		downAction = self.createAction ('Down', self.down, ':/icons/down-icon.png', 'Move down')
-		balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
-		balloonAction.setChecked (self.settings.balloons)
+		self.autoSwitchAction = self.createAction ('Enable auto-switch', self.setAutoSwitch, ':/icons/switch-user.png', 'Enable/Disable the auto switch function', None, True)
+		self.autoSwitchAction.setChecked (self.settings.auto_switch)
+		self.balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
+		self.balloonAction.setChecked (self.settings.balloons)
 		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
 		aboutAction = self.createAction ('&About', self.about, ':/icons/help-about.png', 'About SAM')
@@ -139,7 +138,8 @@ class MainWindow (QMainWindow):
 		actionsMenu.addAction (quotaAction)
 		actionsMenu.addAction (logoutAction)
 		settingsMenu = menubar.addMenu ('&Settings')
-		settingsMenu.addAction (balloonAction)
+		settingsMenu.addAction (self.autoSwitchAction)
+		settingsMenu.addAction (self.balloonAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
 		helpMenu.addAction (updateAction)
@@ -168,7 +168,8 @@ class MainWindow (QMainWindow):
 		headers.setText (1, 'Status')
 		headers.setText (2, 'Usage')
 		headers.setText (3, 'Remaining')
-		self.table.header().resizeSection (0, 160)
+		self.table.header().resizeSection (0, 120)
+		self.table.header().resizeSection (2, 160)
 
 		self.setCentralWidget (self.table)
 		self.setWindowIcon (QIcon(':/icons/logo.png'))
@@ -178,7 +179,8 @@ class MainWindow (QMainWindow):
 		self.tray.setIcon ( QIcon(':/icons/logo.png') )
 		self.tray.setVisible(True)
 		self.trayMenu = QMenu ()
-		self.trayMenu.addAction ( balloonAction )
+		self.trayMenu.addAction ( self.autoSwitchAction )
+		self.trayMenu.addAction ( self.balloonAction )
 		self.trayMenu.addSeparator()
 		self.trayMenu.addAction ( loginAction )
 		self.trayMenu.addAction ( quotaAction )
@@ -200,19 +202,21 @@ class MainWindow (QMainWindow):
 			lck.write ( str(os.getpid()) )
 			lck.close()
 			conf = open(conf_file,'r')
-			pref = conf.readlines()
+			pref = conf.read().split('\n')
 			
 			bools = pref[0]
 			self.settings.auto_login = bool(int(bools[0]))
-			self.settings.switch_on_limit = bool(int(bools[1]))
+			self.autoSwitchAction.setChecked ( bool(int(bools[1])) )
 			self.settings.switch_on_critical = bool(int(bools[2]))
-			self.settings.switch_on_wrongPass = bool(int(bools[3]))
-			self.settings.balloons = bool(int(bools[4]))
+			self.balloonAction.setChecked ( bool(int(bools[3])) )
 			
 			self.settings.update_quota_after = int(pref[1])
 			self.settings.relogin_after = int(pref[2])
 			self.settings.critical_quota_limit = float(pref[3])
-			self.settings.rev = pref[4].replace('\n','')
+			toks = pref[4].split(':')
+			self.settings.server = toks[0]
+			self.settings.port = toks[1]
+			self.settings.rev = pref[5].replace('\n','')
 			conf.close()
 			
 			conf = open ( acc_file, 'rb' )
@@ -236,8 +240,11 @@ class MainWindow (QMainWindow):
 
 		except: pass
 
-	def setBalloon (self):
-		self.settings.balloons = not self.settings.balloons
+	def setAutoSwitch (self, checked):
+		self.settings.auto_switch = checked
+
+	def setBalloon (self, checked):
+		self.settings.balloons = checked
 
 	def closeEvent(self, event):
 		if self.isVisible():
@@ -251,9 +258,8 @@ class MainWindow (QMainWindow):
 				item.setIcon (0, QIcon(GREEN))
 				if self.settings.balloons:
 					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
-			elif status == 'Logged out' or status == 'Checking usage' or status == '' or status=='Logging in':
-				if status != 'Checking usage' or self.currentLogin != self.table.indexOfTopLevelItem(item):
-					item.setIcon (0, QIcon(YELLOW))
+			elif status == 'Logged out' or status == '':
+				item.setIcon (0, QIcon(YELLOW))
 			else:
 				item.setIcon (0, QIcon(RED))
 				if self.settings.balloons:
@@ -268,8 +274,13 @@ class MainWindow (QMainWindow):
 			self.table.itemWidget (item, 2).setValue(int(round(used)))
 
 	def configure (self):
-		dlg = SettingsDlg(self)
+		import settings
+		dlg = settings.SettingsDlg(self)
 		if dlg.exec_():
+			self.settings.server = str ( dlg.ipEdit.text() )
+			self.settings.port = str ( dlg.portEdit.text() )
+			Cyberoam.cyberroamIP = self.settings.server
+			Cyberoam.cyberroamPort = self.settings.port
 			self.settings.auto_login = dlg.autoLogin.isChecked()
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
@@ -277,14 +288,14 @@ class MainWindow (QMainWindow):
 			self.quotaTimer.stop()
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
-			self.settings.switch_on_limit = dlg.quotaSwitchCheck.isChecked() and dlg.usageCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
-			self.settings.switch_on_critical = dlg.criticalSwitchCheck.isChecked() and dlg.usageCheck.isChecked() and  dlg.autoSwitchCheck.isChecked()
-			self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
-			self.settings.switch_on_wrongPass = dlg.wrongPassCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
-			self.settings.balloons = dlg.balloonPopups.isChecked()
+			self.autoSwitchAction.setChecked ( dlg.autoSwitchCheck.isChecked() )
+			self.settings.switch_on_critical = dlg.criticalCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
+			if self.settings.switch_on_critical:
+				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
+			self.balloonAction.setChecked ( dlg.balloonPopups.isChecked() )
 
 	def switch (self, to=None):
-		if not (self.settings.switch_on_limit or self.settings.switch_on_critical or self.settings.switch_on_wrongPass):
+		if not (self.settings.auto_switch):
 			self.currentLogin = -1
 			return None
 		if to is None:
@@ -293,6 +304,8 @@ class MainWindow (QMainWindow):
 			self.login ( to, -1, True )
 
 	def login (self, item=None, column=-1, switch=False):
+		if switch:
+			print 'switch'
 		if item is None:
 			item = self.table.currentItem()
 			if item is None:
@@ -300,7 +313,6 @@ class MainWindow (QMainWindow):
 				self.table.setCurrentItem(item)
 		elif switch:
 			self.table.setCurrentItem (item)
-		item.setText (1, 'Logging in')
 		curr = self.table.indexOfTopLevelItem ( item )
 		prev = self.currentLogin
 		if curr<0:
@@ -309,7 +321,6 @@ class MainWindow (QMainWindow):
 		item.setText (1, get_err(c))
 		if c == 0:
 			self.currentLogin = curr
-			_c, quota = self.accounts[curr].getQuota()
 			if self.getQuota ( item ): # if getQuota() did not perform a switch
 				if switch:
 					self.loginTimer.stop()
@@ -319,9 +330,7 @@ class MainWindow (QMainWindow):
 					self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 			if prev!=-1 and prev!=curr and not switch:
 				self.table.topLevelItem (prev).setText (1, 'Logged out')
-		elif c == 2 and self.settings.switch_on_wrongPass and curr!=len(self.accounts)-1:
-			self.switch( self.table.topLevelItem(curr+1) )
-		elif c == 1 and self.settings.switch_on_limit and curr!=len(self.accounts)-1:
+		elif c != 3 and self.settings.auto_switch and curr!=len(self.accounts)-1:
 			self.switch( self.table.topLevelItem(curr+1) )
 		else:
 			self.loginTimer.stop()
@@ -360,22 +369,19 @@ class MainWindow (QMainWindow):
 					if curr==self.currentLogin and self.currentLogin<len(self.accounts)-1:
 						self.switch ()
 						return False
-			return True
-		elif c<3:
-			item.setText (1, get_err(c))
-			if curr==self.currentLogin:
-				if (c==1 and self.settings.switch_on_limit) or (c==2 and self.settings.switch_on_wrongPass):
-					if self.currentLogin != len(self.accounts)-1:
-						self.switch()
-					else:
-						self.currentLogin=-1
 		else:
 			item.setText (1, get_err(c))
-		return False
+			if curr==self.currentLogin and c!=3 and self.settings.auto_switch:
+				if self.currentLogin < len(self.accounts)-1:
+					self.switch()
+					return False
+				else:
+					self.currentLogin=-1
+		return True
 
 	def addAccount (self, uid=None, pwd=None):
+		import prompt
 		if uid is not None and pwd is not None:
-			print uid
 			new = QTreeWidgetItem ([uid, '', '', ''])
 			new.setIcon (0, QIcon(YELLOW))
 			self.table.addTopLevelItem ( new )
@@ -387,14 +393,15 @@ class MainWindow (QMainWindow):
 			if self.getQuota ( new ):
 				new.setText (1, '')
 		else:
-			dlg = Prompt(self)
+			dlg = prompt.Prompt(self)
 			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
 			if dlg.exec_():
 				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()))
 
 	def editAccount (self):
+		import prompt
 		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		dlg = Prompt(self, self.accounts[current].username)
+		dlg = prompt.Prompt(self, self.accounts[current].username)
 		dlg.setWindowIcon (QIcon(':/icons/user-properties.png'))
 		if dlg.exec_():
 			self.table.currentItem().setText (0, dlg.unameEdit.text())
@@ -460,7 +467,8 @@ class MainWindow (QMainWindow):
 			self.accounts[i].acc_no = i
 
 	def update (self):
-		o = Updater(self, self.settings.rev)
+		import update
+		o = update.Updater(self, self.settings.rev)
 		if o.exec_():
 			path = os.sep.join(sys.argv[0].split(os.sep)[:-1])
 			ls = os.listdir ( path )
@@ -479,7 +487,8 @@ class MainWindow (QMainWindow):
 					os.remove ( path+os.sep+item )
 
 	def about (self):
-		dlg = About()
+		import about
+		dlg = about.About()
 		dlg.exec_()
 
 	def quit (self):
@@ -498,13 +507,13 @@ class MainWindow (QMainWindow):
 		
 		conf = open(conf_file,'w')
 		conf.write (str(int(self.settings.auto_login)))
-		conf.write (str(int(self.settings.switch_on_limit)))
+		conf.write (str(int(self.settings.auto_switch)))
 		conf.write (str(int(self.settings.switch_on_critical)))
-		conf.write (str(int(self.settings.switch_on_wrongPass)))
 		conf.write (str(int(self.settings.balloons))+'\n')
 		conf.write (str(self.settings.update_quota_after)+'\n')
 		conf.write (str(self.settings.relogin_after)+'\n')
 		conf.write (str(self.settings.critical_quota_limit)+'\n')
+		conf.write (self.settings.server+':'+self.settings.port+'\n')
 		conf.write (self.settings.rev+'\n')
 		conf.close()
 		
@@ -517,7 +526,7 @@ class MainWindow (QMainWindow):
 		if reason == QSystemTrayIcon.Trigger:
 			self.hide() if self.isVisible() else self.show()
 
-	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None, signal='triggered()'):
+	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None):
 		action = QAction (text, self)
 		if icon is not None:
 			action.setIcon (QIcon (icon))
@@ -527,9 +536,11 @@ class MainWindow (QMainWindow):
 			action.setToolTip (tip)
 			action.setStatusTip (tip)
 		if slot is not None:
-			self.connect (action, SIGNAL(signal), slot)
-		if checkable:
-			action.setCheckable (True)
+			if checkable:
+				action.setCheckable (True)
+				self.connect (action, SIGNAL('toggled(bool)'), slot)
+			else:
+				self.connect (action, SIGNAL('triggered()'), slot)
 		return action
 
 def main():
