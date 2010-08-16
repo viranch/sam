@@ -9,17 +9,21 @@ class SettingsDlg (QDialog):
 		self.setWindowTitle ('Preferences')
 
 		#grid1
-		ipLabel = QLabel ('Cyberoam Server IP:')
+		ipLabel = QLabel ('Server:')
 		portLabel = QLabel ('Port:')
 		self.ipEdit = QLineEdit (parent.settings.server)
 		colonLabel = QLabel (':')
 		self.portEdit = QLineEdit (parent.settings.port)
+		checkButton = QPushButton ('&Check')
+		self.servLabel = QLabel()
 		grid1 = QGridLayout()
 		grid1.addWidget (ipLabel, 0, 0)
-		grid1.addWidget (portLabel, 0, 2)
+		grid1.addWidget (portLabel, 0, 2, 1, 2)
 		grid1.addWidget (self.ipEdit, 1, 0)
 		grid1.addWidget (colonLabel, 1, 1)
 		grid1.addWidget (self.portEdit, 1, 2)
+		grid1.addWidget (checkButton, 1, 3)
+		grid1.addWidget (self.servLabel, 2, 0)
 
 		#autoLogin CheckBox
 		self.autoLogin = QCheckBox ('Auto login on startup')
@@ -85,6 +89,7 @@ class SettingsDlg (QDialog):
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
+		self.connect (checkButton, SIGNAL('clicked()'), self.check)
 		self.connect (buttonBox, SIGNAL('accepted()'), self, SLOT('accept()'))
 		self.connect (buttonBox, SIGNAL('rejected()'), self, SLOT('reject()'))
 		self.connect (self.autoSwitchCheck, SIGNAL('toggled(bool)'), self.updateUi)
@@ -94,3 +99,14 @@ class SettingsDlg (QDialog):
 		self.criticalCheck.setEnabled ( state )
 		self.criticalSpin.setEnabled ( state and self.criticalCheck.isChecked() )
 
+	def check (self):
+		addr = str ( self.ipEdit.text() )
+		try: port = int ( self.portEdit.text() )
+		except ValuError: port = 80
+		import socket
+		serv = socket.socket()
+		try:
+			serv.connect ( (addr, port) )
+			self.servLabel.setText ('<font color="green">Server Found</font>')
+		except: self.servLabel.setText ('<font color="red">Server not found</font>')
+		serv.close()
