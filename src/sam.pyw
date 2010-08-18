@@ -32,7 +32,7 @@ else:
 	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
 
 def get_err ( err_code ):
-	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Network Error', 'Account in use'][err_code]
+	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Account in use'][err_code]
 
 class Config ():
 
@@ -66,18 +66,16 @@ class Account ():
 		except Cyberoam.WrongPassword:
 			return 2
 		except Cyberoam.MultipleLoginError:
-			return 4
-		except IOError:
-			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
 			return 3
+		except IOError:
+			return 4
 
 	def logout (self):
 		try:
 			Cyberoam.logout (self.username+DOMAIN, self.passwd)
 			return True
 		except IOError:
-			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
-		return False
+			return False
 
 	def getQuota (self):
 		try:
@@ -88,8 +86,7 @@ class Account ():
 		except Cyberoam.WrongPassword:
 			return 2, None
 		except IOError:
-			QMessageBox.critical (self.parent, 'Network Error', 'Error with network connection.')
-			return 3, None
+			return 4, None
 
 class MainWindow (QMainWindow):
 
@@ -259,13 +256,13 @@ class MainWindow (QMainWindow):
 			if status == 'Logged in':
 				item.setIcon (0, QIcon(GREEN))
 				if self.settings.balloons:
-					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
+					self.tray.showMessage ('SAM', item.text(0)+': '+status)
 			elif status == 'Logged out' or status == '':
 				item.setIcon (0, QIcon(YELLOW))
 			else:
 				item.setIcon (0, QIcon(RED))
 				if self.settings.balloons:
-					self.tray.showMessage ('Message from Cyberoam', item.text(0)+': '+status)
+					self.tray.showMessage ('SAM', item.text(0)+': '+status)
 				if status=='Limit Reached':
 					item.setText (3, '0.00 KB')
 		elif column == 3:
@@ -318,7 +315,8 @@ class MainWindow (QMainWindow):
 		if curr<0:
 			return None
 		c = self.accounts[curr].login()
-		item.setText (1, get_err(c))
+		if c<4:
+			item.setText (1, get_err(c))
 		if c == 0:
 			self.currentLogin = curr
 			if self.getQuota ( item ): # if getQuota() did not perform a switch
@@ -330,12 +328,14 @@ class MainWindow (QMainWindow):
 					self.quotaTimer.start ( self.settings.update_quota_after*1000 )
 			if prev!=-1 and prev!=curr and not switch:
 				self.table.topLevelItem (prev).setText (1, 'Logged out')
-		elif c != 3 and self.settings.auto_switch and curr!=len(self.accounts)-1:
+		elif c != 4 and self.settings.auto_switch and curr!=len(self.accounts)-1:
 			self.switch( self.table.topLevelItem(curr+1) )
-		else:
+		elif c==4:
+			self.status.showMessage ('Network Error')
+			self.tray.showMessage ('SAM', 'Network Error')
 			self.loginTimer.stop()
-			self.quotaTimer.stop()
-			self.currentLogin = -1
+			if item.text (1)=='Logged in' or item.text(1)=='Limit Reached' or item.text(1)=='Wrong Password':
+				item.setText (1, '')
 
 	def reLogin (self):
 		self.login (self.table.topLevelItem(self.currentLogin))
@@ -361,6 +361,9 @@ class MainWindow (QMainWindow):
 		c, quota = self.accounts[curr].getQuota()
 		if c==0:
 			item.setText (3, quota[1])
+			if self.currentLogin>=0 and not self.loginTimer.isActive():
+				self.loginTimer.start ( self.settings.relogin_after*1000 )
+				self.login (self.table.topLevelItem(self.currentLogin))
 			if self.settings.switch_on_critical:
 				q = quota[0].split()
 				used = float(q[0])*1024 if 'MB' in q[1] else float(q[0])
@@ -370,13 +373,20 @@ class MainWindow (QMainWindow):
 						self.switch ()
 						return False
 		else:
-			item.setText (1, get_err(c))
-			if curr==self.currentLogin and c!=3 and self.settings.auto_switch:
+			if c!=4:
+				item.setText (1, get_err(c))
+			if curr==self.currentLogin and c!=4 and self.settings.auto_switch:
 				if self.currentLogin < len(self.accounts)-1:
 					self.switch()
 					return False
 				else:
 					self.currentLogin=-1
+			elif c==4 and curr==self.currentLogin:
+				self.loginTimer.stop()
+				self.status.showMessage ('Network Error')
+				self.tray.showMessage ('SAM', 'Network Error')
+				if item.text (1)=='Logged in' or item.text(1)=='Limit Reached' or item.text(1)=='Wrong Password':
+					item.setText (1, '')
 		return True
 
 	def addAccount (self, uid=None, pwd=None):
