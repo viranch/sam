@@ -186,7 +186,6 @@ class MainWindow (QMainWindow):
 		self.trayMenu.addAction ( quitAction )
 		self.tray.setContextMenu ( self.trayMenu )
 		
-		
 		self.connect ( self.tray, SIGNAL('activated(QSystemTrayIcon::ActivationReason)'), self.toggleWindow )
 		self.connect ( self.table, SIGNAL('itemChanged(QTreeWidgetItem*,int)'), self.updateUi )
 		self.connect ( self.table, SIGNAL('itemDoubleClicked(QTreeWidgetItem*,int)'), self.login )

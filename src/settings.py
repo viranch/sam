@@ -25,9 +25,11 @@ class SettingsDlg (QDialog):
 		grid1.addWidget (checkButton, 1, 3)
 		grid1.addWidget (self.servLabel, 2, 0)
 
-		#autoLogin CheckBox
+		#Misc opts
 		self.autoLogin = QCheckBox ('Auto login on startup')
 		self.autoLogin.setChecked (parent.settings.auto_login)
+		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
+		self.balloonPopups.setChecked ( parent.settings.balloons )
 
 		#grid
 		loginIntervalLabel = QLabel ('Re-login after every:')
@@ -67,16 +69,13 @@ class SettingsDlg (QDialog):
 		hbox.addWidget (self.criticalCheck)
 		hbox.addWidget (self.criticalSpin)
 
-		#balloonPopup CheckBox
-		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
-		self.balloonPopups.setChecked ( parent.settings.balloons )
-
 		#buttonBox
 		buttonBox = QDialogButtonBox ( QDialogButtonBox.Ok | QDialogButtonBox.Cancel )
 		
 		vbox = QVBoxLayout()
 		vbox.addLayout (grid1)
 		vbox.addWidget (self.autoLogin)
+		vbox.addWidget ( self.balloonPopups )
 		vbox.addWidget ( QLabel() )
 		vbox.addLayout (grid)
 		vbox.addWidget ( QLabel() )
@@ -84,8 +83,6 @@ class SettingsDlg (QDialog):
 		vbox.addWidget (self.autoSwitchCheck)
 		vbox.addLayout (hbox)
 		vbox.addWidget ( QLabel() )
-		vbox.addWidget ( QLabel() )
-		vbox.addWidget ( self.balloonPopups )
 		vbox.addWidget (buttonBox)
 		self.setLayout (vbox)
 		
