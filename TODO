@@ -1,5 +1,4 @@
 TODO List:
 
-1. Handle the "Multiple login not allowed" reply from cyberoam on login request.
+1. Do login/quota/logout requests in threads so that SAM doesn't seem to be get hanged.
 
-2. Kill properly
