@@ -2,3 +2,4 @@ TODO List:
 
 1. Do login/quota/logout requests in threads so that SAM doesn't seem to be get hanged.
 
+2. MainWindow is in tray, open settings from tray menu, click OK or Cancel, SAM segfaults. Fix this.
