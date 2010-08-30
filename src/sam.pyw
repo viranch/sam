@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '0032543d98ae'
+		self.rev = '06432da4b68a'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.DOMAIN = DOMAIN
@@ -436,16 +436,20 @@ class MainWindow (QMainWindow):
 		self.status.showMessage (rm.username+' removed', 5000)
 		self.bars.pop (current)
 		self.updateBars()
+		self.savePrefs (True, False)
 		return popped, rm
 
 	def clearList (self):
 		if len(self.accounts)==0:
 			self.status.showMessage ('List already clear!', 5000)
 			return None
-		self.table.clear()
-		self.accounts = []
-		self.bars = []
-		self.status.showMessage ('List cleared', 5000)
+		b = QMessageBox.question (self, 'SAM', 'Are you sure you want to remove all users?', QMessageBox.Yes, QMessageBox.No)
+		if b == QMessageBox.Yes:
+			self.table.clear()
+			self.accounts = []
+			self.bars = []
+			self.status.showMessage ('List cleared', 5000)
+			self.savePrefs(True, False)
 
 	def move (self, to):
 		if len(self.accounts)<2:
