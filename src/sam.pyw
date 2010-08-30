@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '038abe1de0df'
+		self.rev = '3980fe048fdc'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.DOMAIN = DOMAIN
