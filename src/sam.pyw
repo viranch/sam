@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '0f00813886ba'
+		self.rev = '0032543d98ae'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.DOMAIN = DOMAIN
@@ -570,11 +570,15 @@ if __name__=='__main__':
 	if not os.access (lck_file, os.F_OK):
 		main()
 	else:
-		app = QApplication (sys.argv)
-		b = QMessageBox.question (None, 'SAM', 'SAM seems to be already running.\nAre you sure SAM is not running?', QMessageBox.Yes, QMessageBox.No)
-		if b==QMessageBox.Yes:
-			pid = int ( open(lck_file, 'rb').read() )
-			try:
-				os.kill (pid, 3)
-			except: pass
+		pid = int ( open(lck_file, 'rb').read() )
+		try:
+			os.kill (pid, 0)
+			app = QApplication (sys.argv)
+			b = QMessageBox.question (None, 'SAM', 'SAM seems to be already running.\nAre you sure SAM is not running?', QMessageBox.Yes, QMessageBox.No)
+			if b==QMessageBox.Yes:
+				try:
+					os.kill (pid, 1)
+				except: pass
+				main()
+		except OSError:
 			main()
