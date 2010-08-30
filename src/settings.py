@@ -35,7 +35,7 @@ class SettingsDlg (QDialog):
 		loginIntervalLabel = QLabel ('Re-login after every:')
 		self.loginSpin = QSpinBox ()
 		self.loginSpin.setSuffix (' minutes')
-		self.loginSpin.setRange (1, 60)
+		self.loginSpin.setRange (1, 500)
 		self.loginSpin.setValue (parent.settings.relogin_after/60)
 		
 		quotaIntervalLabel = QLabel ('Refresh Quota usage after every:')
