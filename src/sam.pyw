@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '3980fe048fdc'
+		self.rev = '0f00813886ba'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.DOMAIN = DOMAIN
@@ -230,7 +230,7 @@ class MainWindow (QMainWindow):
 				passwd = bz2.decompress(crypt_passwd)
 				index = len(passwd)
 				passwd = passwd[0:index]
-				self.addAccount(user,passwd)
+				self.addAccount(user,passwd,True)
 				i = i+2
 			conf.close()
 			if self.settings.auto_login == True and len(self.accounts)>0:
@@ -291,7 +291,7 @@ class MainWindow (QMainWindow):
 			if self.settings.switch_on_critical:
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
 			self.balloonAction.setChecked ( dlg.balloonPopups.isChecked() )
-			self.savePrefs()
+			self.savePrefs(False, True)
 
 	def switch (self, to=None):
 		if not (self.settings.auto_switch):
@@ -361,6 +361,8 @@ class MainWindow (QMainWindow):
 		c, quota = self.accounts[curr].getQuota()
 		if c==0:
 			item.setText (3, quota[1])
+			if item.text(1)=='Wrong Password' or item.text(1)=='Limit Reached' or item.text(1)=='Critical usage':
+				item.setText (1, '')
 			if self.currentLogin>=0 and not self.loginTimer.isActive():
 				self.loginTimer.start ( self.settings.relogin_after*1000 )
 				self.login (self.table.topLevelItem(self.currentLogin))
@@ -389,7 +391,7 @@ class MainWindow (QMainWindow):
 					item.setText (1, '')
 		return True
 
-	def addAccount (self, uid=None, pwd=None):
+	def addAccount (self, uid=None, pwd=None, auto=False):
 		import prompt
 		if uid is not None and pwd is not None:
 			new = QTreeWidgetItem ([uid, '', '', ''])
@@ -400,13 +402,14 @@ class MainWindow (QMainWindow):
 			self.table.setItemWidget (new, 2, self.bars[-1][0])
 			self.accounts.append ( Account(self, uid, pwd, len(self.accounts)) )
 			self.status.showMessage (uid+' added', 5000)
-			if self.getQuota ( new ):
-				new.setText (1, '')
+			self.getQuota (new)
 		else:
 			dlg = prompt.Prompt(self)
 			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
 			if dlg.exec_():
-				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()))
+				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()), auto)
+				if not auto:
+					self.savePrefs (True, False)
 
 	def editAccount (self):
 		import prompt
@@ -420,8 +423,8 @@ class MainWindow (QMainWindow):
 				self.accounts[current].passwd = str( dlg.pwdEdit.text() )
 			if current == self.currentLogin:
 				self.reLogin()
-			elif self.getQuota ( self.table.currentItem() ):
-				self.table.currentItem().setText (1, '')
+			self.getQuota ( self.table.currentItem() )
+			self.savePrefs (True, False)
 
 	def rmAccount (self):
 		if len(self.accounts) == 0:
@@ -504,34 +507,36 @@ class MainWindow (QMainWindow):
 	def quit (self):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
-		self.savePrefs()
+		self.savePrefs(True, True)
 		try:
 			os.remove (lck_file)
 		except: pass
 		qApp.quit()
 
-	def savePrefs (self):
-		conf = open ( acc_file, 'wb' )
-		length = str(len(self.accounts))
-		conf.write(length+'\n\n\n')
-		for ac in self.accounts:
-			temp = ac.passwd
-			ciphertext = bz2.compress(temp)
-			temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
-			conf.write(temp)
-		conf.close()
-		
-		conf = open(conf_file,'w')
-		conf.write (str(int(self.settings.auto_login)))
-		conf.write (str(int(self.settings.auto_switch)))
-		conf.write (str(int(self.settings.switch_on_critical)))
-		conf.write (str(int(self.settings.balloons))+'\n')
-		conf.write (str(self.settings.update_quota_after)+'\n')
-		conf.write (str(self.settings.relogin_after)+'\n')
-		conf.write (str(self.settings.critical_quota_limit)+'\n')
-		conf.write (self.settings.server+':'+self.settings.port+'\n')
-		conf.write (self.settings.rev+'\n')
-		conf.close()
+	def savePrefs (self, acc, pref):
+		if acc:
+			conf = open ( acc_file, 'wb' )
+			length = str(len(self.accounts))
+			conf.write(length+'\n\n\n')
+			for ac in self.accounts:
+				temp = ac.passwd
+				ciphertext = bz2.compress(temp)
+				temp = ac.username+'!@#$%^&*'+ciphertext+'!@#$%^&*'
+				conf.write(temp)
+			conf.close()
+
+		if pref:
+			conf = open(conf_file,'w')
+			conf.write (str(int(self.settings.auto_login)))
+			conf.write (str(int(self.settings.auto_switch)))
+			conf.write (str(int(self.settings.switch_on_critical)))
+			conf.write (str(int(self.settings.balloons))+'\n')
+			conf.write (str(self.settings.update_quota_after)+'\n')
+			conf.write (str(self.settings.relogin_after)+'\n')
+			conf.write (str(self.settings.critical_quota_limit)+'\n')
+			conf.write (self.settings.server+':'+self.settings.port+'\n')
+			conf.write (self.settings.rev+'\n')
+			conf.close()
 
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
