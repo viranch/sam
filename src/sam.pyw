@@ -44,7 +44,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = 'e1e1bfd30e3b'
+		self.rev = '038abe1de0df'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.DOMAIN = DOMAIN
@@ -192,7 +192,7 @@ class MainWindow (QMainWindow):
 		self.connect ( self.loginTimer, SIGNAL('timeout()'), self.reLogin )
 		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.refreshQuota )
 
-	def readConfs (self):
+	def loadPrefs (self):
 		try:
 			lck = open(lck_file, 'wb')
 			lck.write ( str(os.getpid()) )
@@ -291,6 +291,7 @@ class MainWindow (QMainWindow):
 			if self.settings.switch_on_critical:
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
 			self.balloonAction.setChecked ( dlg.balloonPopups.isChecked() )
+			self.savePrefs()
 
 	def switch (self, to=None):
 		if not (self.settings.auto_switch):
@@ -503,7 +504,13 @@ class MainWindow (QMainWindow):
 	def quit (self):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
-		
+		self.savePrefs()
+		try:
+			os.remove (lck_file)
+		except: pass
+		qApp.quit()
+
+	def savePrefs (self):
 		conf = open ( acc_file, 'wb' )
 		length = str(len(self.accounts))
 		conf.write(length+'\n\n\n')
@@ -525,11 +532,6 @@ class MainWindow (QMainWindow):
 		conf.write (self.settings.server+':'+self.settings.port+'\n')
 		conf.write (self.settings.rev+'\n')
 		conf.close()
-		
-		try:
-			os.remove (lck_file)
-		except: pass
-		qApp.quit()
 
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
@@ -556,7 +558,7 @@ def main():
 	app = QApplication (sys.argv)
 	window = MainWindow()
 	window.show()
-	window.readConfs()
+	window.loadPrefs()
 	app.exec_()
 
 if __name__=='__main__':
