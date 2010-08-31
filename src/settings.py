@@ -25,6 +25,13 @@ class SettingsDlg (QDialog):
 		grid1.addWidget (checkButton, 1, 3)
 		grid1.addWidget (self.servLabel, 2, 0)
 
+		#domainBox
+		domainLabel = QLabel ('Domain:')
+		self.domainEdit = QLineEdit (parent.settings.domain)
+		domainBox = QHBoxLayout()
+		domainBox.addWidget (domainLabel)
+		domainBox.addWidget (self.domainEdit)
+
 		#Misc opts
 		self.autoLogin = QCheckBox ('Auto login on startup')
 		self.autoLogin.setChecked (parent.settings.auto_login)
@@ -74,6 +81,7 @@ class SettingsDlg (QDialog):
 		
 		vbox = QVBoxLayout()
 		vbox.addLayout (grid1)
+		vbox.addLayout (domainBox)
 		vbox.addWidget (self.autoLogin)
 		vbox.addWidget ( self.balloonPopups )
 		vbox.addWidget ( QLabel() )

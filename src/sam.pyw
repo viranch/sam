@@ -13,8 +13,6 @@ from PyQt4.QtGui import *
 import bz2
 import qrc_icon
 
-DOMAIN = '@da-iict.org'
-
 GREEN = ':/icons/ball-green.png'
 RED = ':/icons/ball-red.png'
 YELLOW = ':/icons/ball-yellow.png'
@@ -44,10 +42,10 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '06432da4b68a'
+		self.rev = '1701c4c88cad'
 		self.server = '10.100.56.55'
 		self.port = '8090'
-		self.DOMAIN = DOMAIN
+		self.domain = '@da-iict.org'
 
 class Account ():
 
@@ -59,7 +57,7 @@ class Account ():
 
 	def login (self):
 		try:
-			Cyberoam.login (self.username+DOMAIN, self.passwd)
+			Cyberoam.login (self.username+self.parent.settings.domain, self.passwd)
 			return 0
 		except Cyberoam.DataTransferLimitExceeded:
 			return 1
@@ -72,14 +70,14 @@ class Account ():
 
 	def logout (self):
 		try:
-			Cyberoam.logout (self.username+DOMAIN, self.passwd)
+			Cyberoam.logout (self.username+self.parent.settings.domain, self.passwd)
 			return True
 		except IOError:
 			return False
 
 	def getQuota (self):
 		try:
-			quota = Cyberoam.netUsage (self.username+DOMAIN, self.passwd)
+			quota = Cyberoam.netUsage (self.username+self.parent.settings.domain, self.passwd)
 			return 0, quota
 		except Cyberoam.DataTransferLimitExceeded:
 			return 1, None
@@ -205,7 +203,7 @@ class MainWindow (QMainWindow):
 			self.autoSwitchAction.setChecked ( bool(int(bools[1])) )
 			self.settings.switch_on_critical = bool(int(bools[2]))
 			self.balloonAction.setChecked ( bool(int(bools[3])) )
-			
+
 			self.settings.update_quota_after = int(pref[1])
 			self.settings.relogin_after = int(pref[2])
 			self.settings.critical_quota_limit = float(pref[3])
@@ -215,6 +213,7 @@ class MainWindow (QMainWindow):
 			self.settings.port = toks[1]
 			Cyberoam.cyberroamPort = toks[1]
 			self.settings.rev = pref[5].replace('\n','')
+			self.settings.domain = pref[6]
 			conf.close()
 			
 			conf = open ( acc_file, 'rb' )
@@ -279,6 +278,7 @@ class MainWindow (QMainWindow):
 			self.settings.port = str ( dlg.portEdit.text() )
 			Cyberoam.cyberroamIP = self.settings.server
 			Cyberoam.cyberroamPort = self.settings.port
+			self.settings.domain = str(dlg.domainEdit.text())
 			self.settings.auto_login = dlg.autoLogin.isChecked()
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
@@ -540,6 +540,7 @@ class MainWindow (QMainWindow):
 			conf.write (str(self.settings.critical_quota_limit)+'\n')
 			conf.write (self.settings.server+':'+self.settings.port+'\n')
 			conf.write (self.settings.rev+'\n')
+			conf.write (self.settings.domain+'\n')
 			conf.close()
 
 	def toggleWindow (self, reason):
