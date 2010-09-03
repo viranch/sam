@@ -24,10 +24,17 @@ if 'win' in sys.platform:
 	acc_file = os.getenv('appdata')+'\\'+acc_file
 	conf_file = os.getenv('appdata')+'\\'+conf_file
 	lck_file = os.getenv('appdata')+'\\'+lck_file
+	def kill (pid, sig):
+		"""kill function for Win32"""
+		kernel32 = ctypes.windll.kernel32
+		handle = kernel32.OpenProcess(sig, 0, pid)
+		return (0 != kernel32.TerminateProcess(handle, 0))
 else:
 	acc_file = os.getenv('HOME')+'/.sam/'+acc_file
 	conf_file = os.getenv('HOME')+'/.sam/'+conf_file
 	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
+	def kill (pid, sig):
+		os.kill (pid, sig)
 
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Account in use'][err_code]
@@ -42,7 +49,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '1701c4c88cad'
+		self.rev = '4d1231044cd4'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.domain = '@da-iict.org'
@@ -577,13 +584,13 @@ if __name__=='__main__':
 	else:
 		pid = int ( open(lck_file, 'rb').read() )
 		try:
-			os.kill (pid, 0)
+			kill (pid, 0)
 			app = QApplication (sys.argv)
 			b = QMessageBox.question (None, 'SAM', 'SAM seems to be already running.\nAre you sure SAM is not running?', QMessageBox.Yes, QMessageBox.No)
 			if b==QMessageBox.Yes:
 				try:
-					os.kill (pid, 1)
+					kill (pid, 1)
 				except: pass
 				main()
-		except OSError:
+		except:
 			main()
