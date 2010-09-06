@@ -26,6 +26,7 @@ if 'win' in sys.platform:
 	lck_file = os.getenv('appdata')+'\\'+lck_file
 	def kill (pid, sig):
 		"""kill function for Win32"""
+		import ctypes
 		kernel32 = ctypes.windll.kernel32
 		handle = kernel32.OpenProcess(sig, 0, pid)
 		return (0 != kernel32.TerminateProcess(handle, 0))
@@ -49,7 +50,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '4d1231044cd4'
+		self.rev = '6f8667eddb8c'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.domain = '@da-iict.org'
@@ -122,7 +123,7 @@ class MainWindow (QMainWindow):
 		self.balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
 		self.balloonAction.setChecked (self.settings.balloons)
 		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
-		updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
+		#updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
 		aboutAction = self.createAction ('&About', self.about, ':/icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
@@ -144,7 +145,7 @@ class MainWindow (QMainWindow):
 		settingsMenu.addAction (self.balloonAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
-		helpMenu.addAction (updateAction)
+		#helpMenu.addAction (updateAction)
 		helpMenu.addAction (aboutAction)
 		
 		self.toolbar.addAction ( newUserAction )
@@ -159,7 +160,7 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( downAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( prefsAction )
-		self.toolbar.addAction ( updateAction )
+		#self.toolbar.addAction ( updateAction )
 		self.toolbar.addAction ( aboutAction )
 		self.toolbar.addAction ( quitAction )
 
@@ -183,7 +184,7 @@ class MainWindow (QMainWindow):
 		self.trayMenu = QMenu ()
 		self.trayMenu.addAction ( self.autoSwitchAction )
 		self.trayMenu.addAction ( self.balloonAction )
-		self.trayMenu.addAction ( prefsAction )
+		#self.trayMenu.addAction ( prefsAction )
 		self.trayMenu.addSeparator()
 		self.trayMenu.addAction ( loginAction )
 		self.trayMenu.addAction ( logoutAction )
