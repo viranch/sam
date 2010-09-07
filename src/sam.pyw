@@ -11,6 +11,7 @@ import Cyberoam
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 import bz2
+import thread
 import qrc_icon
 
 GREEN = ':/icons/ball-green.png'
