@@ -18,25 +18,21 @@ GREEN = ':/icons/ball-green.png'
 RED = ':/icons/ball-red.png'
 YELLOW = ':/icons/ball-yellow.png'
 
-acc_file = '.samacc.conf'
-conf_file = '.samconf.conf'
 lck_file = '.sam.lck'
 if 'win' in sys.platform:
-	acc_file = os.getenv('appdata')+'\\'+acc_file
-	conf_file = os.getenv('appdata')+'\\'+conf_file
 	lck_file = os.getenv('appdata')+'\\'+lck_file
-	def kill (pid, sig):
+	def exists (pid):
 		"""kill function for Win32"""
 		import ctypes
-		kernel32 = ctypes.windll.kernel32
-		handle = kernel32.OpenProcess(sig, 0, pid)
-		return (0 != kernel32.TerminateProcess(handle, 0))
+		return ctypes.windll.kernel32.OpenProcess(1, 0, pid)!=0
 else:
-	acc_file = os.getenv('HOME')+'/.sam/'+acc_file
-	conf_file = os.getenv('HOME')+'/.sam/'+conf_file
 	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
-	def kill (pid, sig):
-		os.kill (pid, sig)
+	def exists (pid):
+		try:
+			os.kill (pid, 0)
+			return True
+		except:
+			return False
 
 def get_err ( err_code ):
 	return ['Logged in', 'Limit Reached', 'Wrong Password', 'Account in use'][err_code]
@@ -51,7 +47,7 @@ class Config ():
 		self.update_quota_after = 360 #seconds = 6 mins
 		self.relogin_after = 3000 #seconds = 50 mins
 		self.critical_quota_limit = 95.0*1024 #KB = 95MB
-		self.rev = '6f8667eddb8c'
+		self.rev = 'd4a7cf232d26'
 		self.server = '10.100.56.55'
 		self.port = '8090'
 		self.domain = '@da-iict.org'
@@ -585,17 +581,19 @@ class QApplication(QApplication):
 		for l in lis:
 			if type(l) == type(MainWindow()):
 				l.loadPrefs()
+
 	def commitData(self,manager):
 		lis = qApp.allWidgets()
 		for l in lis:
 			if type(l) == type(MainWindow()):
 				l.savePrefs()
-	
 
 def main():
 	app = QApplication (sys.argv)
 	window = MainWindow()
 	window.show()
+	if 'win' in sys.platform:
+		window.loadPrefs()
 	app.exec_()
 
 if __name__=='__main__':
@@ -603,14 +601,8 @@ if __name__=='__main__':
 		main()
 	else:
 		pid = int ( open(lck_file, 'rb').read() )
-		try:
-			kill (pid, 0)
+		if exists(pid):
 			app = QApplication (sys.argv)
-			b = QMessageBox.question (None, 'SAM', 'SAM seems to be already running.\nAre you sure SAM is not running?', QMessageBox.Yes, QMessageBox.No)
-			if b==QMessageBox.Yes:
-				try:
-					kill (pid, 1)
-				except: pass
-				main()
-		except:
+			QMessageBox.information (None, 'SAM', 'SAM is already running.')
+		else:
 			main()
