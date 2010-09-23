@@ -176,6 +176,7 @@ class MainWindow (QMainWindow):
 		self.setWindowIcon (QIcon(':/icons/logo.png'))
 		self.setWindowTitle ('SAM - Syberoam Account Manager')
 		self.resize(498, self.size().height())
+
 		self.tray = QSystemTrayIcon (self)
 		self.tray.setIcon ( QIcon(':/icons/logo.png') )
 		self.tray.setVisible(True)
@@ -198,48 +199,45 @@ class MainWindow (QMainWindow):
 		self.connect ( self.quotaTimer, SIGNAL('timeout()'), self.refreshQuota )
 
 	def loadPrefs (self):
-		try:
-			settings = QSettings("DA-IICT","SAM")
-			point = settings.value("pos").toPoint()
-			size = settings.value("size").toSize() 
-			self.setGeometry(QRect(point,size))
-			
-			settings.beginGroup("Account")
-			length = (settings.value("Length")).toInt()[0]
-			for ac in range(0,length):
-				temp1= "Account"+str(ac)
-				temp = settings.value(temp1).toString()
-				toks = temp.split('!@#$%')
-				username = toks[0]
-				password = toks[1]
-				self.addAccount(str(username),str(password),True)
-			
-			settings.endGroup()
+		settings = QSettings("DA-IICT","SAM")
+		point = settings.value("pos").toPoint()
+		size = settings.value("size").toSize() 
+		self.setGeometry(QRect(point,size))
+		
+		settings.beginGroup("Account")
+		length = (settings.value("Length")).toInt()[0]
+		for ac in range(0,length):
+			temp1= "Account"+str(ac)
+			temp = settings.value(temp1).toString()
+			toks = temp.split('!@#$%')
+			username = toks[0]
+			password = toks[1]
+			self.addAccount(str(username),str(password),True)
+		
+		settings.endGroup()
 
-			settings.beginGroup("Conf")
-			self.settings.auto_login=(settings.value("AutoLogin")).toBool()
-			self.settings.auto_switch = (settings.value("AutoSwitch")).toBool()
-			self.settings.switch_on_critical=(settings.value("SwitchOnCritical")).toBool()
-			self.balloonAction.setChecked((settings.value("Ballons")).toBool())
+		settings.beginGroup("Conf")
+		self.settings.auto_login=(settings.value("AutoLogin")).toBool()
+		self.settings.auto_switch = (settings.value("AutoSwitch")).toBool()
+		self.settings.switch_on_critical=(settings.value("SwitchOnCritical")).toBool()
+		self.balloonAction.setChecked((settings.value("Ballons")).toBool())
+		
+		self.settings.update_quota_after = (settings.value("UpdateQuotaAfter")).toInt()[0]
+		self.settings.relogin_after = (settings.value("ReloginAfter")).toInt()[0]
+		self.settings.critical_quota_limit=(settings.value("CriticalQuotaLimit")).toFloat()[0]
+		self.settings.server=str(settings.value("Server").toString())
+		self.settings.port= str(settings.value("Port").toString())
+		self.settings.rev=str(settings.value("Rev").toString())
+		self.settings.domain=str(settings.value("Domain").toString())
+		settings.endGroup()
 			
-			self.settings.update_quota_after = (settings.value("UpdateQuotaAfter")).toInt()[0]
-			self.settings.relogin_after = (settings.value("ReloginAfter")).toInt()[0]
-			self.settings.critical_quota_limit=(settings.value("CriticalQuotaLimit")).toFloat()[0]
-			self.settings.server=str(settings.value("Server").toString())
-			self.settings.port= str(settings.value("Port").toString())
-			self.settings.rev=str(settings.value("Rev").toString())
-			self.settings.domain=str(settings.value("Domain").toString())
-			settings.endGroup()
+		lck = open(lck_file, 'w')
+		lck.write ( str(os.getpid()) )
+		lck.close()
 			
-			lck = open(lck_file, 'wb')
-			lck.write ( str(os.getpid()) )
-			lck.close()
+		if self.settings.auto_login == True and len(self.accounts)>0:
+				self.login()
 			
-			if self.settings.auto_login == True and len(self.accounts)>0:
-					self.login()
-			
-		except:pass
-
 	def setAutoSwitch (self, checked):
 		self.settings.auto_switch = checked
 
@@ -283,18 +281,20 @@ class MainWindow (QMainWindow):
 			Cyberoam.cyberroamPort = self.settings.port
 			self.settings.domain = str(dlg.domainEdit.text())
 			self.settings.auto_login = dlg.autoLogin.isChecked()
+			self.settings.balloons = dlg.balloonPopups.isChecked()
+			self.balloonAction.setChecked ( self.settings.balloons )
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
 			self.loginTimer.stop()
 			self.quotaTimer.stop()
 			self.loginTimer.start ( self.settings.relogin_after*1000 )
 			self.quotaTimer.start ( self.settings.update_quota_after*1000 )
-			self.autoSwitchAction.setChecked ( dlg.autoSwitchCheck.isChecked() )
+			self.settings.auto_switch = dlg.autoSwitchCheck.isChecked()
+			self.autoSwitchAction.setChecked ( self.settings.auto_switch )
 			self.settings.switch_on_critical = dlg.criticalCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
 			if self.settings.switch_on_critical:
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
-			self.balloonAction.setChecked ( dlg.balloonPopups.isChecked() )
-			self.savePrefs(False, True)
+			self.savePrefs()
 
 	def switch (self, to=None):
 		if not (self.settings.auto_switch):
@@ -412,7 +412,7 @@ class MainWindow (QMainWindow):
 			if dlg.exec_():
 				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()), auto)
 				if not auto:
-					self.savePrefs (True, False)
+					self.savePrefs ()
 
 	def editAccount (self):
 		import prompt
@@ -427,7 +427,7 @@ class MainWindow (QMainWindow):
 			if current == self.currentLogin:
 				self.reLogin()
 			self.getQuota ( self.table.currentItem() )
-			self.savePrefs (True, False)
+			self.savePrefs ()
 
 	def rmAccount (self):
 		if len(self.accounts) == 0:
@@ -439,7 +439,7 @@ class MainWindow (QMainWindow):
 		self.status.showMessage (rm.username+' removed', 5000)
 		self.bars.pop (current)
 		self.updateBars()
-		self.savePrefs (True, False)
+		self.savePrefs ()
 		return popped, rm
 
 	def clearList (self):
@@ -452,7 +452,7 @@ class MainWindow (QMainWindow):
 			self.accounts = []
 			self.bars = []
 			self.status.showMessage ('List cleared', 5000)
-			self.savePrefs(True, False)
+			self.savePrefs()
 
 	def move (self, to):
 		if len(self.accounts)<2:
@@ -514,42 +514,39 @@ class MainWindow (QMainWindow):
 	def quit (self):
 		self.loginTimer.stop()
 		self.quotaTimer.stop()
-		self.savePrefs(True, True)
+		self.savePrefs()
+		os.remove(lck_file)
 		qApp.quit()
 
-	def savePrefs (self, acc, pref):
+	def savePrefs (self):
 		
-		try:
-			settings= QSettings("DA-IICT","SAM")
-			settings.setValue("size",self.size())
-			settings.setValue("pos",self.pos())
-			settings.beginGroup("Account")
-			settings.setValue("Length",len(self.accounts))
-			cnt=0
-			for ac in self.accounts:
-				
-				temp = ac.username+'!@#$%'+ac.passwd
-				temp1 = "Account"+str(cnt)
-				settings.setValue(temp1,temp)
-				cnt = cnt+1
-			settings.endGroup()
+		settings= QSettings("DA-IICT","SAM")
+		settings.setValue("size",self.size())
+		settings.setValue("pos",self.pos())
+		settings.beginGroup("Account")
+		settings.setValue("Length",len(self.accounts))
+		cnt=0
+		for ac in self.accounts:
+			
+			temp = ac.username+'!@#$%'+ac.passwd
+			temp1 = "Account"+str(cnt)
+			settings.setValue(temp1,temp)
+			cnt = cnt+1
+		settings.endGroup()
 
-			settings.beginGroup("Conf")
-			settings.setValue("AutoLogin",int(self.settings.auto_login))
-			settings.setValue("AutoSwitch",int(self.settings.auto_switch))
-			settings.setValue("SwitchOnCritical",int(self.settings.switch_on_critical))
-			settings.setValue("Ballons",int(self.settings.balloons))
-			settings.setValue("UpdateQuotaAfter",self.settings.update_quota_after)
-			settings.setValue("ReloginAfter",self.settings.relogin_after)
-			settings.setValue("CriticalQuotaLimit",self.settings.critical_quota_limit)
-			settings.setValue("Server",self.settings.server)
-			settings.setValue("Port",self.settings.port)
-			settings.setValue("Rev",self.settings.rev)
-			settings.setValue("Domain",self.settings.domain)
-			settings.endGroup()
-		
-			os.remove(lck_file)
-		except:pass	
+		settings.beginGroup("Conf")
+		settings.setValue("AutoLogin",int(self.settings.auto_login))
+		settings.setValue("AutoSwitch",int(self.settings.auto_switch))
+		settings.setValue("SwitchOnCritical",int(self.settings.switch_on_critical))
+		settings.setValue("Ballons",int(self.settings.balloons))
+		settings.setValue("UpdateQuotaAfter",self.settings.update_quota_after)
+		settings.setValue("ReloginAfter",self.settings.relogin_after)
+		settings.setValue("CriticalQuotaLimit",self.settings.critical_quota_limit)
+		settings.setValue("Server",self.settings.server)
+		settings.setValue("Port",self.settings.port)
+		settings.setValue("Rev",self.settings.rev)
+		settings.setValue("Domain",self.settings.domain)
+		settings.endGroup()
 
 	def toggleWindow (self, reason):
 		if reason == QSystemTrayIcon.Trigger:
@@ -576,12 +573,6 @@ class QApplication(QApplication):
 	def __init__(self,arg):
 		super(QApplication,self).__init__(arg)
 
-	def saveState(self,manager):
-		lis = qApp.allWidgets()
-		for l in lis:
-			if type(l) == type(MainWindow()):
-				l.loadPrefs()
-
 	def commitData(self,manager):
 		lis = qApp.allWidgets()
 		for l in lis:
@@ -592,8 +583,7 @@ def main():
 	app = QApplication (sys.argv)
 	window = MainWindow()
 	window.show()
-	if 'win' in sys.platform:
-		window.loadPrefs()
+	window.loadPrefs()
 	app.exec_()
 
 if __name__=='__main__':
