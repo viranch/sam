@@ -8,7 +8,7 @@ class Prompt (QDialog):
 
 		self.buttonBox = QDialogButtonBox (QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
 		unameLabel = QLabel ('Username:')
-		suffLabel = QLabel (parent.settings.domain)
+		suffLabel = QLabel (parent.getSetting('Conf', 'Domain').toString())
 		pwdLabel = QLabel ('Password:')
 		self.unameEdit = QLineEdit()
 		if uid is not None:

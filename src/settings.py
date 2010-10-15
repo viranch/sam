@@ -11,9 +11,9 @@ class SettingsDlg (QDialog):
 		#grid1
 		ipLabel = QLabel ('Server:')
 		portLabel = QLabel ('Port:')
-		self.ipEdit = QLineEdit (parent.settings.server)
+		self.ipEdit = QLineEdit (parent.getSetting('Conf', 'Server').toString())
 		colonLabel = QLabel (':')
-		self.portEdit = QLineEdit (parent.settings.port)
+		self.portEdit = QLineEdit (parent.getSetting('Conf', 'Port').toString())
 		checkButton = QPushButton ('&Check')
 		self.servLabel = QLabel()
 		grid1 = QGridLayout()
@@ -27,29 +27,29 @@ class SettingsDlg (QDialog):
 
 		#domainBox
 		domainLabel = QLabel ('Domain:')
-		self.domainEdit = QLineEdit (parent.settings.domain)
+		self.domainEdit = QLineEdit (parent.getSetting('Conf', 'Domain').toString())
 		domainBox = QHBoxLayout()
 		domainBox.addWidget (domainLabel)
 		domainBox.addWidget (self.domainEdit)
 
 		#Misc opts
 		self.autoLogin = QCheckBox ('Auto login on startup')
-		self.autoLogin.setChecked (parent.settings.auto_login)
+		self.autoLogin.setChecked (parent.getSetting('Conf', 'AutoLogin').toBool())
 		self.balloonPopups = QCheckBox ( 'Enable balloon popups' )
-		self.balloonPopups.setChecked ( parent.settings.balloons )
+		self.balloonPopups.setChecked ( parent.getSetting('Conf', 'Balloons').toBool() )
 
 		#grid
 		loginIntervalLabel = QLabel ('Re-login after every:')
 		self.loginSpin = QSpinBox ()
 		self.loginSpin.setSuffix (' minutes')
 		self.loginSpin.setRange (1, 500)
-		self.loginSpin.setValue (parent.settings.relogin_after/60)
+		self.loginSpin.setValue (parent.getSetting('Conf', 'ReloginAfter').toInt()[0]/60)
 		
 		quotaIntervalLabel = QLabel ('Refresh Quota usage after every:')
 		self.quotaSpin = QSpinBox()
 		self.quotaSpin.setSuffix (' minutes')
 		self.quotaSpin.setRange (1, 60)
-		self.quotaSpin.setValue (parent.settings.update_quota_after/60)
+		self.quotaSpin.setValue (parent.getSetting('Conf', 'UpdateQuotaAfter').toInt()[0]/60)
 		
 		grid = QGridLayout()
 		grid.addWidget (loginIntervalLabel, 0, 0)
@@ -59,18 +59,18 @@ class SettingsDlg (QDialog):
 
 		#autoSwitch CheckBox
 		self.autoSwitchCheck = QCheckBox ('Enable Auto Switch')
-		self.autoSwitchCheck.setChecked (parent.settings.auto_switch)
+		self.autoSwitchCheck.setChecked (parent.getSetting('Conf', 'AutoSwitch').toBool())
 		self.autoSwitchCheck.setToolTip ('Enable/Disable auto-switching to next account in list,\nif any error is encountered\n(wrong password or data transfer limit exceeds)')
 
 		#hbox
 		self.criticalCheck = QCheckBox ('Switch when usage reaches:')
-		self.criticalCheck.setChecked (parent.settings.switch_on_critical and parent.settings.auto_switch)
+		self.criticalCheck.setChecked (parent.getSetting('Conf', 'SwitchOnCritical').toBool() and parent.getSetting('Conf', 'AutoSwitch').toBool())
 		self.criticalCheck.setEnabled (self.autoSwitchCheck.isChecked())
 		self.criticalCheck.setToolTip ('This will switch to next account if the\nspecified usage is reached.')
 		self.criticalSpin = QDoubleSpinBox()
 		self.criticalSpin.setSuffix (' MB')
 		self.criticalSpin.setRange (5, 100)
-		self.criticalSpin.setValue (parent.settings.critical_quota_limit/1024)
+		self.criticalSpin.setValue (parent.getSetting('Conf', 'CriticalQuotaLimit').toInt()[0]/1024)
 		self.criticalSpin.setEnabled (self.criticalCheck.isChecked())
 		hbox = QHBoxLayout()
 		hbox.addWidget (self.criticalCheck)
