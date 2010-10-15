@@ -52,44 +52,73 @@ class Config ():
 		self.port = '8090'
 		self.domain = '@da-iict.org'
 
-class Account ():
+class Account (QTreeWidgetItem):
 
-	def __init__ (self, parent, login_id='', passwd='', no=-1):
+	def __init__ (self, parent, columns, login_id='', passwd='', no=-1):
+		super(Account, self).__init__(parent, columns)
 		self.username = login_id
 		self.passwd = passwd
 		self.acc_no = no
 		self.parent = parent
+		self.setIcon (0, QIcon(YELLOW))
+		self.pbar = QProgressBar(self)
+		self.pbar.setRange (0, 100)
+		self.thread = QThread(self)
 
 	def login (self):
 		try:
 			Cyberoam.login (self.username+self.parent.settings.domain, self.passwd)
+			self.setText (1, 'Logged in')
+			self.setIcon (0, QIcon(GREEN))
 			return 0
 		except Cyberoam.DataTransferLimitExceeded:
-			return 1
+			self.thread.emit (SIGNAL('limitExceeded()'))
+			self.setText (1, 'Limit Reached')
 		except Cyberoam.WrongPassword:
-			return 2
+			self.thread.emit (SIGNAL('wrongPassword()'))
+			self.setText (1, 'Wrong Password')
 		except Cyberoam.MultipleLoginError:
-			return 3
+			self.thread.emit (SIGNAL('multipleLogin()'))
+			self.setText (1, 'Account in use')
 		except IOError:
+			self.thread.emit (SIGNAL('networkError()'))
+			self.setText (1, 'Network Error')
 			return 4
+		self.thread.emit(SIGNAL('switch(int)'), self.acc_no)
+		self.setIcon (0, QIcon(RED))
 
 	def logout (self):
 		try:
 			Cyberoam.logout (self.username+self.parent.settings.domain, self.passwd)
+			self.setText (1, 'Logged out')
+			self.setIcon (0, QIcon (YELLOW))
 			return True
 		except IOError:
+			self.thread.emit (SIGNAL('networkError()'))
+			self.setText (1, 'Network Error')
+			self.setIcon (0, QIcon(RED))
 			return False
 
 	def getQuota (self):
 		try:
 			quota = Cyberoam.netUsage (self.username+self.parent.settings.domain, self.passwd)
-			return 0, quota
+			self.setText (3, quota[1])
+			used, suff = quota[0].split()
+			used = round(float(used)/1024) if suff=='KB' else round(float(used))
+			self.pbar.setValue ( int(used) )
+			return 0
 		except Cyberoam.DataTransferLimitExceeded:
-			return 1, None
+			self.thread.emit (SIGNAL('limitExceeded()'))
+			self.setText (1, 'Limit Reached')
 		except Cyberoam.WrongPassword:
-			return 2, None
+			self.thread.emit (SIGNAL('wrongPassword()'))
+			self.setText (1, 'Wrong Password')
 		except IOError:
-			return 4, None
+			self.thread.emit (SIGNAL('networkError()'))
+			self.setText (1, 'Network Error')
+			return 4
+		self.thread.emit(SIGNAL('switch(int)'), self.acc_no)
+		self.setIcon (0, QIcon(RED))
 
 class MainWindow (QMainWindow):
 
@@ -296,14 +325,20 @@ class MainWindow (QMainWindow):
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
 			self.savePrefs()
 
-	def switch (self, to=None):
-		if not (self.settings.auto_switch):
+	#def switch (self, to=None):
+		#if not (self.settings.auto_switch):
+			#self.currentLogin = -1
+			#return None
+		#if to is None:
+			#to  = self.table.topLevelItem (self.currentLogin+1)
+		#if to is not None:
+			#self.login ( to, -1, True )
+
+	def switch (self, switch_from):
+		if not self.settings.auto_switch or switch_from+1 == self.table.topLevelItemCount():
 			self.currentLogin = -1
-			return None
-		if to is None:
-			to  = self.table.topLevelItem (self.currentLogin+1)
-		if to is not None:
-			self.login ( to, -1, True )
+			return
+		self.login ( self.table.topLevelItem(switch_from+1) )
 
 	def login (self, item=None, column=-1, switch=False):
 		if item is None:
@@ -397,13 +432,13 @@ class MainWindow (QMainWindow):
 	def addAccount (self, uid=None, pwd=None, auto=False):
 		import prompt
 		if uid is not None and pwd is not None:
-			new = QTreeWidgetItem ([uid, '', '', ''])
-			new.setIcon (0, QIcon(YELLOW))
-			self.table.addTopLevelItem ( new )
-			self.bars.append( [QProgressBar(), 0] )
-			self.bars[-1][0].setRange (0, 102400)
-			self.table.setItemWidget (new, 2, self.bars[-1][0])
-			self.accounts.append ( Account(self, uid, pwd, len(self.accounts)) )
+			new = Account (self.table, [uid, '', '', ''], uid, pwd, self.table.topLevelItemCount())
+			self.table.setItemWidget (new, 2, new.pbar)
+			#self.connect (new.thread, SIGNAL('limitExceeded()'), self.onLimitExceed)
+			#self.connect (new.thread, SIGNAL('wrongPassword()'), self.onWrongPassword)
+			#self.connect (new.thread, SIGNAL('multipleLogin()'), self.onMultipleLogin)
+			#self.connect (new.thread, SIGNAL('networkError()'), self.onNetworkError)
+			self.connect (new.thread, SIGNAL('switch(int)'), self.switch)
 			self.status.showMessage (uid+' added', 5000)
 			self.getQuota (new)
 		else:
