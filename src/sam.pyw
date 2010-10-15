@@ -51,8 +51,8 @@ class Config ():
 
 class Account (QTreeWidgetItem):
 
-	def __init__ (self, parent, login_id='', passwd='', no=-1):
-		super(Account, self).__init__(parent, [login_id, '', '', ''])
+	def __init__ (self, parent, login_id, uid, passwd, no):
+		super(Account, self).__init__(parent, [uid, '', '', ''])
 		self.username = login_id
 		self.passwd = passwd
 		self.acc_no = no
@@ -64,12 +64,14 @@ class Account (QTreeWidgetItem):
 
 	def login (self):
 		try:
-			Cyberoam.login (self.username+self.treeWidget().parent().settings.domain, self.passwd)
+			Cyberoam.login (self.username, self.passwd)
 			self.setText (1, 'Logged in')
 			self.thread.emit (SIGNAL('setIcon(QString)'), GREEN)
 			self.thread.emit (SIGNAL('loggedIn(int)'), self.acc_no)
 			return
 		except Cyberoam.DataTransferLimitExceeded:
+			self.setText (3, '0.00 MB')
+			self.thread.emit (SIGNAL('usage(int)'), self.pbar.maximum())
 			self.thread.emit (SIGNAL('limitExceeded()'))
 			self.setText (1, 'Limit Reached')
 		except Cyberoam.WrongPassword:
@@ -80,32 +82,36 @@ class Account (QTreeWidgetItem):
 			self.setText (1, 'Account in use')
 		except IOError:
 			self.thread.emit (SIGNAL('networkError()'))
-			self.setText (1, 'Network Error')
+			#self.setText (1, 'Network Error')
 			return
 		self.thread.emit (SIGNAL('setIcon(QString)'), RED)
 		self.thread.emit(SIGNAL('switch(int)'), self.acc_no)
 
 	def logout (self):
 		try:
-			Cyberoam.logout (self.username+self.treeWidget().parent().settings.domain, self.passwd)
+			Cyberoam.logout (self.username, self.passwd)
 			self.setText (1, 'Logged out')
 			self.thread.emit (SIGNAL('setIcon(QString)'), YELLOW)
 			self.thread.emit (SIGNAL('loggedOut()'))
 		except IOError:
 			self.thread.emit (SIGNAL('networkError()'))
-			self.setText (1, 'Network Error')
+			#self.setText (1, 'Network Error')
 			self.thread.emit (SIGNAL('setIcon(QString)'), RED)
 
 	def getQuota (self):
 		try:
-			quota = Cyberoam.netUsage (self.username+self.treeWidget().parent().settings.domain, self.passwd)
+			quota = Cyberoam.netUsage (self.username, self.passwd)
 			self.setText (3, quota[1])
 			used, suff = quota[0].split()
 			used = round(float(used)/1024) if suff=='KB' else round(float(used))
 			self.thread.emit (SIGNAL('usage(int)'), int(used))
 			self.thread.emit (SIGNAL('gotGuota(int)'), self.acc_no)
+			if self.text(1) != 'Logged in':
+				self.setText (1, '')
+				self.thread.emit (SIGNAL('setIcon(QString)'), YELLOW)
 			return
 		except Cyberoam.DataTransferLimitExceeded:
+			self.setText (3, '0.00 MB')
 			self.thread.emit (SIGNAL('usage(int)'), self.pbar.maximum())
 			self.thread.emit (SIGNAL('limitExceeded()'))
 			self.setText (1, 'Limit Reached')
@@ -114,7 +120,7 @@ class Account (QTreeWidgetItem):
 			self.setText (1, 'Wrong Password')
 		except IOError:
 			self.thread.emit (SIGNAL('networkError()'))
-			self.setText (1, 'Network Error')
+			#self.setText (1, 'Network Error')
 			return
 		self.thread.emit(SIGNAL('switch(int)'), self.acc_no)
 		self.thread.emit (SIGNAL('setIcon(QString)'), RED)
@@ -143,12 +149,11 @@ class MainWindow (QMainWindow):
 		rmUserAction = self.createAction ('Remove', self.rmAccount, ':/icons/user-remove-icon.png', 'Remove User', QKeySequence.Delete)
 		editUserAction = self.createAction ('&Edit...', self.editAccount, ':/icons/user-icon.png', 'Edit User')
 		clearAction = self.createAction ('&Clear All', self.clearList, ':/icons/edit-clear-list.png', 'Clear Users list')
+		sortAction = self.createAction ('&Sort', self.sort, '', 'Sort accounts by ID')
 		upAction = self.createAction ('Up', self.up, ':/icons/up-icon.png', 'Move up')
 		downAction = self.createAction ('Down', self.down, ':/icons/down-icon.png', 'Move down')
 		self.autoSwitchAction = self.createAction ('Enable auto-switch', self.setAutoSwitch, ':/icons/switch-user.png', 'Enable/Disable the auto switch function', None, True)
-		self.autoSwitchAction.setChecked (self.settings.auto_switch)
 		self.balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
-		self.balloonAction.setChecked (self.settings.balloons)
 		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
 		#updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
 		aboutAction = self.createAction ('&About', self.about, ':/icons/help-about.png', 'About SAM')
@@ -157,6 +162,7 @@ class MainWindow (QMainWindow):
 		menubar = self.menuBar()
 		userMenu = menubar.addMenu ('&Users')
 		userMenu.addAction (newUserAction)
+		userMenu.addAction (sortAction)
 		userMenu.addSeparator()
 		userMenu.addAction (editUserAction)
 		userMenu.addAction (rmUserAction)
@@ -234,19 +240,10 @@ class MainWindow (QMainWindow):
 		size = settings.value("size").toSize() 
 		self.setGeometry(QRect(point,size))
 		
-		settings.beginGroup("Account")
-		length = (settings.value("Length")).toInt()[0]
-		for ac in range(length):
-			temp1= "Account"+str(ac)
-			temp = settings.value(temp1).toString()
-			username, password = temp.split('!@#$%')
-			self.addAccount(str(username),str(password),True)
-		
-		settings.endGroup()
-
 		settings.beginGroup("Conf")
 		self.settings.auto_login=(settings.value("AutoLogin")).toBool()
 		self.settings.auto_switch = (settings.value("AutoSwitch")).toBool()
+		self.autoSwitchAction.setChecked (self.settings.auto_switch)
 		self.settings.switch_on_critical=(settings.value("SwitchOnCritical")).toBool()
 		self.balloonAction.setChecked((settings.value("Ballons")).toBool())
 		
@@ -260,19 +257,35 @@ class MainWindow (QMainWindow):
 		self.settings.rev=str(settings.value("Rev").toString())
 		self.settings.domain=str(settings.value("Domain").toString())
 		settings.endGroup()
-			
+		
+		settings.beginGroup("Account")
+		length = (settings.value("Length")).toInt()[0]
+		for ac in range(length):
+			temp1= "Account"+str(ac)
+			temp = settings.value(temp1).toString()
+			username, password = temp.split('!@#$%')
+			self.addAccount(str(username),str(password),True)
+		settings.endGroup()
+
 		lck = open(lck_file, 'w')
 		lck.write ( str(os.getpid()) )
 		lck.close()
 			
 		if self.settings.auto_login == True and self.table.topLevelItemCount()>0:
-				self.login()
-			
+			self.login()
+
 	def setAutoSwitch (self, checked):
 		self.settings.auto_switch = checked
+		self.savePrefs()
 
 	def setBalloon (self, checked):
 		self.settings.balloons = checked
+		self.savePrefs()
+
+	def minimizeEvent(self, event):
+		if self.isVisible():
+			self.hide()
+		event.ignore()
 
 	def closeEvent(self, event):
 		if self.isVisible():
@@ -281,7 +294,51 @@ class MainWindow (QMainWindow):
 
 	def selectItem (self):
 		self.table.setCurrentItem (self.table.currentItem(), 2)
-		#self.getQuota (self.table.currentItem())
+
+	def toggleWindow (self, reason):
+		if reason == QSystemTrayIcon.Trigger:
+			self.hide() if self.isVisible() else self.show()
+
+	def addAccount (self, uid=None, pwd=None, auto=False):
+		import prompt
+		if uid is not None and pwd is not None:
+			new = Account (self.table, uid+self.settings.domain, uid, pwd, self.table.topLevelItemCount())
+			self.table.setItemWidget (new, 2, new.pbar)
+			#self.connect (new.thread, SIGNAL('limitExceeded()'), self.onLimitExceed)
+			#self.connect (new.thread, SIGNAL('wrongPassword()'), self.onWrongPassword)
+			#self.connect (new.thread, SIGNAL('multipleLogin()'), self.onMultipleLogin)
+			self.connect (new.thread, SIGNAL('networkError()'), self.onNetworkError)
+			self.connect (new.thread, SIGNAL('usage(int)'), new.pbar.setValue)
+			self.connect (new.thread, SIGNAL('setIcon(QString)'), new._setIcon)
+			self.connect (new.thread, SIGNAL('switch(int)'), self.switch)
+			self.connect (new.thread, SIGNAL('loggedIn(int)'), self.onLoggedIn)
+			self.connect (new.thread, SIGNAL('loggedOut()'), self.onLoggedOut)
+			self.connect (new.thread, SIGNAL('gotQuota(int)'), self.onGotQuota)
+			self.status.showMessage (uid+' added', 5000)
+			self.getQuota (new)
+		else:
+			dlg = prompt.Prompt(self)
+			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
+			if dlg.exec_():
+				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()), auto)
+				if not auto:
+					self.savePrefs ()
+
+	def editAccount (self):
+		import prompt
+		item = self.table.currentItem()
+		dlg = prompt.Prompt(self, item.text(0))
+		dlg.setWindowIcon (QIcon(':/icons/user-properties.png'))
+		if dlg.exec_():
+			item.username = str(dlg.unameEdit.text())+self.settings.domain
+			item.setText (0, str(dlg.unameEdit.text()))
+			if str(dlg.pwdEdit.text()) != '':
+				item.passwd = str( dlg.pwdEdit.text() )
+			if self.table.indexOfTopLevelItem(item) == self.currentLogin:
+				self.reLogin()
+			else:
+				self.getQuota ( item )
+			self.savePrefs ()
 
 	def configure (self):
 		import settings
@@ -297,26 +354,21 @@ class MainWindow (QMainWindow):
 			self.balloonAction.setChecked ( self.settings.balloons )
 			self.settings.relogin_after = dlg.loginSpin.value()*60
 			self.settings.update_quota_after = dlg.quotaSpin.value()*60
+			
+			# Reinitiate timers
 			self.loginTimer.stop()
 			self.quotaTimer.stop()
 			self.loginTimer.setInterval ( self.settings.relogin_after*1000 )
 			self.quotaTimer.setInterval ( self.settings.update_quota_after*1000 )
 			self.loginTimer.start()
 			self.quotaTimer.start()
+			
 			self.settings.auto_switch = dlg.autoSwitchCheck.isChecked()
 			self.autoSwitchAction.setChecked ( self.settings.auto_switch )
 			self.settings.switch_on_critical = dlg.criticalCheck.isChecked() and dlg.autoSwitchCheck.isChecked()
 			if self.settings.switch_on_critical:
 				self.settings.critical_quota_limit = dlg.criticalSpin.value()*1024
 			self.savePrefs()
-
-	def switch (self, switch_from):
-		if self.currentLogin != switch_from:
-			return
-		if not self.settings.auto_switch or switch_from == self.table.topLevelItemCount()-1:
-			self.currentLogin = -1
-			return
-		self.login ( self.table.topLevelItem(switch_from+1) )
 
 	def login (self, item=None):
 		if item is None:
@@ -381,67 +433,17 @@ class MainWindow (QMainWindow):
 				if acc_no == self.currentLogin:
 					self.switch (acc_no)
 
-	def addAccount (self, uid=None, pwd=None, auto=False):
-		import prompt
-		if uid is not None and pwd is not None:
-			new = Account (self.table, uid, pwd, self.table.topLevelItemCount())
-			self.table.setItemWidget (new, 2, new.pbar)
-			#self.connect (new.thread, SIGNAL('limitExceeded()'), self.onLimitExceed)
-			#self.connect (new.thread, SIGNAL('wrongPassword()'), self.onWrongPassword)
-			#self.connect (new.thread, SIGNAL('multipleLogin()'), self.onMultipleLogin)
-			#self.connect (new.thread, SIGNAL('networkError()'), self.onNetworkError)
-			self.connect (new.thread, SIGNAL('usage(int)'), new.pbar.setValue)
-			self.connect (new.thread, SIGNAL('setIcon(QString)'), new._setIcon)
-			self.connect (new.thread, SIGNAL('switch(int)'), self.switch)
-			self.connect (new.thread, SIGNAL('loggedIn(int)'), self.onLoggedIn)
-			self.connect (new.thread, SIGNAL('loggedOut()'), self.onLoggedOut)
-			self.connect (new.thread, SIGNAL('gotQuota(int)'), self.onGotQuota)
-			self.status.showMessage (uid+' added', 5000)
-			self.getQuota (new)
-		else:
-			dlg = prompt.Prompt(self)
-			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
-			if dlg.exec_():
-				self.addAccount(str(dlg.unameEdit.text()), str(dlg.pwdEdit.text()), auto)
-				if not auto:
-					self.savePrefs ()
+	def switch (self, switch_from):
+		if self.currentLogin != switch_from:
+			return
+		if not self.settings.auto_switch or switch_from == self.table.topLevelItemCount()-1:
+			self.currentLogin = -1
+			return
+		self.login ( self.table.topLevelItem(switch_from+1) )
 
-	def editAccount (self):
-		import prompt
-		curr = self.table.currentItem()
-		dlg = prompt.Prompt(self, item.username)
-		dlg.setWindowIcon (QIcon(':/icons/user-properties.png'))
-		if dlg.exec_():
-			item.username = str(dlg.unameEdit.text())
-			item.setText (0, item.username)
-			if str(dlg.pwdEdit.text()) != '':
-				item.passwd = str( dlg.pwdEdit.text() )
-			if current == self.currentLogin:
-				self.reLogin()
-			else:
-				self.getQuota ( item )
-			self.savePrefs ()
-
-	def rmAccount (self):
-		if self.table.topLevelItemCount() == 0:
-			self.status.showMessage ('Nothing to remove!', 5000)
-			return None
-		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
-		item = self.table.takeTopLevelItem (current)
-		self.status.showMessage (item.username+' removed', 5000)
-		#self.updateBars()
-		self.savePrefs ()
-		return item
-
-	def clearList (self):
-		if len(self.accounts)==0:
-			self.status.showMessage ('List already clear!', 5000)
-			return None
-		b = QMessageBox.question (self, 'SAM', 'Are you sure you want to remove all users?', QMessageBox.Yes | QMessageBox.No)
-		if b == QMessageBox.Yes:
-			self.table.clear()
-			self.status.showMessage ('List cleared', 5000)
-			self.savePrefs()
+	def onNetworkError (self):
+		self.status.showMessage ('Network Error')
+		self.tray,showMessage ('Network Error')
 
 	def move (self, to):
 		if self.table.topLevelItemCount()<2:
@@ -451,6 +453,10 @@ class MainWindow (QMainWindow):
 		if current == bound:
 			return None
 		
+		values=[]
+		for i in range (self.table.topLevelItemCount()):
+			values.append (self.table.topLevelItem(i).pbar.value())
+		values.insert (current+to, values.pop(current))
 		self.table.insertTopLevelItem ( current+to, self.table.takeTopLevelItem (current) )
 		
 		if current == self.currentLogin:
@@ -459,17 +465,51 @@ class MainWindow (QMainWindow):
 			self.currentLogin -= to
 
 		self.table.setCurrentItem ( self.table.topLevelItem(current+to) )
-		self.updateBars()
+		self.updateBars(values)
 
 	def up (self): self.move (-1)
 
 	def down (self): self.move (1)
 
-	def updateBars (self):
+	def sort (self):
+		curr = self.table.topLevelItem(self.currentLogin).text(0)
+		self.table.sortItems (0, Qt.AscendingOrder)
+		for i in range (self.table.topLevelItemCount()):
+			if self.table.topLevelItem(i).text(0) == curr:
+				self.currentLogin = i
+				break
+
+	def updateBars (self, values=[]):
+		if len(values)!=self.table.topLevelItemCount():
+			return
 		for i in range(0, self.table.topLevelItemCount()):
 			item = self.table.topLevelItem(i)
 			item.acc_no = i
+			item.pbar = QProgressBar()
+			item.pbar.setRange (0, 100)
+			item.pbar.setValue (values[i])
 			self.table.setItemWidget(item, 2, item.pbar)
+
+	def rmAccount (self):
+		if self.table.topLevelItemCount() == 0:
+			self.status.showMessage ('Nothing to remove!', 5000)
+			return None
+		current = self.table.indexOfTopLevelItem ( self.table.currentItem() )
+		item = self.table.takeTopLevelItem (current)
+		self.status.showMessage (item.text(0)+' removed', 5000)
+		#self.updateBars()
+		self.savePrefs ()
+		return item
+
+	def clearList (self):
+		if self.table.topLevelItemCount()==0:
+			self.status.showMessage ('List already clear!', 5000)
+			return None
+		b = QMessageBox.question (self, 'SAM', 'Are you sure you want to remove all accounts?', QMessageBox.Yes | QMessageBox.No)
+		if b == QMessageBox.Yes:
+			self.table.clear()
+			self.status.showMessage ('List cleared', 5000)
+			self.savePrefs()
 
 	def update (self):
 		import update
@@ -504,19 +544,17 @@ class MainWindow (QMainWindow):
 		qApp.quit()
 
 	def savePrefs (self):
-		
 		settings= QSettings("DA-IICT","SAM")
 		settings.setValue("size",self.size())
 		settings.setValue("pos",self.pos())
+		
 		settings.beginGroup("Account")
 		settings.setValue("Length", self.table.topLevelItemCount())
-		cnt=0
 		for i in range(self.table.topLevelItemCount()):
 			ac = self.table.topLevelItem(i)
-			temp = ac.username+'!@#$%'+ac.passwd
-			temp1 = "Account"+str(cnt)
+			temp = str(ac.text(0))+'!@#$%'+ac.passwd
+			temp1 = "Account"+str(i)
 			settings.setValue(temp1, temp)
-			cnt = cnt+1
 		settings.endGroup()
 
 		settings.beginGroup("Conf")
@@ -532,10 +570,6 @@ class MainWindow (QMainWindow):
 		settings.setValue("Rev",self.settings.rev)
 		settings.setValue("Domain",self.settings.domain)
 		settings.endGroup()
-
-	def toggleWindow (self, reason):
-		if reason == QSystemTrayIcon.Trigger:
-			self.hide() if self.isVisible() else self.show()
 
 	def createAction (self, text, slot=None, icon=None, tip=None, shortcut=None, checkable=None):
 		action = QAction (text, self)
