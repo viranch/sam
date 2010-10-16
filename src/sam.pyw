@@ -138,6 +138,7 @@ class MainWindow (QMainWindow):
 		self.autoSwitchAction = self.createAction ('Enable auto-switch', self.setAutoSwitch, ':/icons/switch-user.png', 'Enable/Disable the auto switch function', None, True)
 		self.balloonAction = self.createAction ('Enable balloon popups', self.setBalloon, None, 'Enable balloon popups', None, True)
 		prefsAction = self.createAction ('&Configure', self.configure, ':/icons/configure.png', 'Configure SAM', QKeySequence.Preferences)
+		updateAction = self.createAction ('&Update', self.update, ':/icons/update.png', 'Update SAM')
 		aboutAction = self.createAction ('&About', self.about, ':/icons/help-about.png', 'About SAM')
 		quitAction = self.createAction ('&Quit', self.quit, ':/icons/application-exit.png', 'Quit SAM', QKeySequence.Quit)
 		
@@ -160,6 +161,7 @@ class MainWindow (QMainWindow):
 		settingsMenu.addAction (self.balloonAction)
 		settingsMenu.addAction (prefsAction)
 		helpMenu = menubar.addMenu ('&Help')
+		helpMenu.addAction (updateAction)
 		helpMenu.addAction (aboutAction)
 		
 		self.toolbar.addAction ( newUserAction )
@@ -174,6 +176,7 @@ class MainWindow (QMainWindow):
 		self.toolbar.addAction ( downAction )
 		self.toolbar.addSeparator()
 		self.toolbar.addAction ( prefsAction )
+		self.toolbar.addAction ( updateAction )
 		self.toolbar.addAction ( aboutAction )
 		self.toolbar.addAction ( quitAction )
 
@@ -420,6 +423,24 @@ class MainWindow (QMainWindow):
 	def onNetworkError (self):
 		self.status.showMessage ('Network Error')
 		self.tray,showMessage ('Network Error')
+
+	def update (self):
+		import update
+		o = update.Updater( self, str( self.getSetting('Conf', 'rev').toString() ) )
+		path = os.path.dirname(__file__)
+		ls = os.listdir ( path )
+		if o.exec_():
+			for item in ls:
+				if item[-4:]=='.tmp':
+					try:
+						os.remove ( path+os.sep+item[:-4] )
+					except: pass
+					os.rename ( path+os.sep+item, path+os.sep+item[:-4] )
+			self.setSetting ('Conf', 'rev', o.rev)
+		else:
+			for item in ls:
+				if item.endswith('.tmp'):
+					os.remove ( path+os.sep+item )
 
 	def move (self, to):
 		if self.table.topLevelItemCount()<2:
