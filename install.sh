@@ -2,5 +2,5 @@
 mkdir -p $HOME/.sam
 cp ./src/*py* $HOME/.sam/
 echo "Please Enter root password"
-sudo cp sam /usr/bin/
+sudo cp sam1 /usr/bin/
 echo "Successful."

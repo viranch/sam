@@ -13,6 +13,7 @@ from PyQt4.QtGui import *
 import bz2
 import thread
 import qrc_icon
+from base64 import *
 
 GREEN = ':/icons/ball-green.png'
 RED = ':/icons/ball-red.png'
@@ -236,7 +237,8 @@ class MainWindow (QMainWindow):
 			temp1= "Account"+str(ac)
 			temp = settings.value(temp1).toString()
 			username, password = temp.split('!@#$%')
-			self.addAccount(str(username),str(password))
+			pasw = b64decode(str(password))
+			self.addAccount(str(username),str(pasw))
 		settings.endGroup()
 
 		lck = open(lck_file, 'w')
@@ -282,7 +284,7 @@ class MainWindow (QMainWindow):
 			self.getQuota (new)
 			self.status.showMessage (uid+' added', 5000)
 			self.setSetting ('Accounts', 'Length', self.table.topLevelItemCount())
-			self.setSetting ('Accounts', 'Account'+str(self.table.indexOfTopLevelItem(new)), new.text(0)+'!@#$%'+new.passwd)
+			self.setSetting ('Accounts', 'Account'+str(self.table.indexOfTopLevelItem(new)), new.text(0)+'!@#$%'+b64encode(str(new.passwd)))
 		else:
 			dlg = prompt.Prompt(self)
 			dlg.setWindowIcon (QIcon(':/icons/list-add-user.png'))
@@ -303,7 +305,7 @@ class MainWindow (QMainWindow):
 				self.reLogin()
 			else:
 				self.getQuota ( item )
-			self.setSetting ('Accounts', 'Account'+str(self.table.indexOfTopLevelItem(item)), item.text(0)+'!@#$%'+item.passwd)
+			self.setSetting ('Accounts', 'Account'+str(self.table.indexOfTopLevelItem(item)), item.text(0)+'!@#$%'+ b64encode(str(item.passwd)))
 
 	def configure (self):
 		import settings
@@ -465,7 +467,7 @@ class MainWindow (QMainWindow):
 		self.updateList(values)
 		for i in [current, current+to]:
 			item = self.table.topLevelItem(i)
-			self.setSetting ('Accounts', 'Account'+str(i), str(item.text(0))+'!@#$%'+item.passwd)
+			self.setSetting ('Accounts', 'Account'+str(i), str(item.text(0))+'!@#$%'+b64encode(str(item.passwd)))
 
 	def up (self): self.move (-1)
 
@@ -501,10 +503,12 @@ class MainWindow (QMainWindow):
 		self.status.showMessage (pop.text(0)+' removed', 5000)
 		for i in range (current, self.table.topLevelItemCount()):
 			item = self.table.topLevelItem(i)
-			self.setSetting ('Accounts', 'Account'+str(i), str(item.text(0))+'!@#$%'+item.passwd)
+			self.setSetting ('Accounts', 'Account'+str(i), str(item.text(0))+'!@#$%'+b64encode(str(item.passwd)))
 		s = QSettings ('DA-IICT', 'SAM')
 		s.beginGroup ('Accounts')
 		s.remove ( 'Account'+str(self.table.topLevelItemCount()) )
+		
+		self.setSetting ('Accounts', 'Length', self.table.topLevelItemCount())
 		return pop
 
 	def clearList (self):
@@ -523,7 +527,7 @@ class MainWindow (QMainWindow):
 		settings.setValue("Length", self.table.topLevelItemCount())
 		for i in range(self.table.topLevelItemCount()):
 			ac = self.table.topLevelItem(i)
-			temp = str(ac.text(0))+'!@#$%'+ac.passwd
+			temp = str(ac.text(0))+'!@#$%'+ b64encode(str(ac.passwd))
 			temp1 = "Account"+str(i)
 			settings.setValue(temp1, temp)
 		settings.endGroup()
