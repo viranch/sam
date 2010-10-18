@@ -1,2 +1,2 @@
 #!/bin/bash
-python $HOME/.sam/sam.pyw &
+$HOME/.sam/sam.pyw &
