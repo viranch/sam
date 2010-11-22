@@ -102,7 +102,7 @@ class Account (QTreeWidgetItem):
 			used, suff = quota[0].split()
 			used = round(float(used)/1024) if suff=='KB' else round(float(used))
 			self.thread.emit (SIGNAL('usage(int)'), int(used))
-			self.thread.emit (SIGNAL('gotGuota(int)'), self.acc_no)
+			self.thread.emit (SIGNAL('gotQuota(int)'), self.acc_no)
 			if self.text(1) != 'Logged in':
 				self.setText (1, '')
 				self.thread.emit (SIGNAL('setIcon(QString)'), YELLOW)
