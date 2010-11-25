@@ -423,19 +423,27 @@ class MainWindow (QMainWindow):
 				item.setText (1, 'Critical usage')
 				item.setIcon (0, QIcon (RED))
 				if acc_no == self.currentLogin:
-					self.switch (acc_no)
+					if acc_no == self.table.topLevelItemCount()-1:
+						self.tray.showMessage ('SAM', 'Critical usage of last account reached.')
+					else:
+						self.switch (acc_no)
+	
 
 	def switch (self, switch_from):
 		if self.currentLogin != switch_from:
 			return
-		if not self.getSetting('Conf', 'AutoSwitch').toBool() or switch_from == self.table.topLevelItemCount()-1:
+		if not self.getSetting('Conf', 'AutoSwitch').toBool():
 			self.currentLogin = -1
+			return
+		if switch_from == self.table.topLevelItemCount()-1 and self.table.topLevelItem(switch_from).text(1)=='Limit Reached':
+			self.currentLogin = -1
+			self.tray.showMessage('SAM', 'Data transfer limit for last account exceeded.')
 			return
 		self.login ( self.table.topLevelItem(switch_from+1) )
 
 	def onNetworkError (self):
 		self.status.showMessage ('Network Error')
-		self.tray,showMessage ('Network Error')
+		self.tray.showMessage ('SAM', 'Network Error')
 
 	def update (self):
 		import update
