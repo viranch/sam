@@ -44,69 +44,16 @@ def netUsage(username, passwd):
 		raise DataTransferLimitExceeded
 	return quota
 
-class MyCyberroamParser(sgmllib.SGMLParser):
-	"A simple parser class."
-
-	def parse(self, s):
-		"Parse the given string 's'."
-		self.feed(s)
-		self.close()
-
-	def __init__(self, verbose=0):
-		"Initialise an object, passing 'verbose' to the superclass."
-	   	sgmllib.SGMLParser.__init__(self, verbose)
-		self.required_entities = ['message','loginstatus','liverequesttime']
-		self.frames_attr = []
-		self.in_required_entity = False
-		self.current_entity = ""
-		self.entity_values = {}
-	
-	def do_frame(self, attributes):
-		for name, value in attributes:
-			if name == "src":
-				self.frames_attr.append(value)
-
-	def unknown_entityref(self,ref):
-		self.current_entity = ref
-		if ref in self.required_entities:
-			self.in_required_entity=True
-
-	def handle_data(self, data):
-		"Try to get the value of entity &message. Used in 2nd pass of parsing."
-
-		if self.in_required_entity:
-			self.entity_values[self.current_entity] = data[1:] #To remove the preceeding =
-			self.in_required_entity = False
-
-	def get_src(self,index=-1):
-		"Return the list of src targets."
-		if index == -1:
-			return self.frames_attr
-		else:
-			return self.frames_attr[index]
-
 def login (username, passwd):
 	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
 	s = f.read()
-
-	# Try and process the page.
-	# The class should have been defined first, remember.
-	myparser = MyCyberroamParser()
-	myparser.parse(s)
+	f.close()
 	
-	# Get the the src targets. It contains the status message. And then parse it again for entity &message.
-	qindex = myparser.get_src(1).index('?')
-	srcstr = myparser.get_src(1)[:qindex+1]+'&'+myparser.get_src(1)[qindex+1:]
-	
-	myparser.parse(srcstr)
-	message = myparser.entity_values['message']
-	message = message.replace('+',' ')
-	
-	if message == "The system could not log you on. Make sure your password is correct":
+	if 'Make+sure+your+password+is+correct' in s:
 		raise WrongPassword
-	if message == "DataTransfer limit has been exceeded":
+	if 'DataTransfer+limit+has+been+exceeded' in s:
 		raise DataTransferLimitExceeded
-	if message == "Multiple login not allowed":
+	if 'Multiple+login+not+allowed' in s:
 		raise MultipleLoginError
 
 def logout (username, passwd):
