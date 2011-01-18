@@ -6,10 +6,9 @@
 cyberroamIP = "10.100.56.55" #The IP of the Cyberoam site.
 cyberroamPort = "8090" #Set to "" if not using.
 
-import sys
 import cookielib
 import urllib2
-import urllib, sgmllib, time
+import urllib
 
 def cyberroamAddress():
 	add = cyberroamIP
