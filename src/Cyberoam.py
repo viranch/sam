@@ -44,7 +44,7 @@ def netUsage(username, passwd):
 	return quota
 
 def login (username, passwd):
-	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=191&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&login=Login")
+	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=191&username="+username+"&password="+passwd)
 	s = f.read()
 	f.close()
 	
@@ -56,6 +56,6 @@ def login (username, passwd):
 		raise MultipleLoginError
 
 def logout (username, passwd):
-	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=193&isAccessDenied=null&url=null&message=&username="+username+"&password="+passwd+"&saveinfo=saveinfo&logout=Logout")
+	f = urllib.urlopen("http://"+cyberroamAddress()+"/corporate/servlet/CyberoamHTTPClient","mode=193&username="+username+"&password="+passwd)
 	s = f.read()
 	f.close()
