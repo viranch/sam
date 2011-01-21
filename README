@@ -12,8 +12,7 @@ Insalltion:
 	Run the following commands:
 
 	$ cd path/to/source
-	$ python2 setup.py build
-	$ sudo python2 setup.py install
+	$ su -c 'python2 setup.py'
 
 	SAM is ready to use! Just issue following in terminal:
 	$ sam
@@ -21,7 +20,7 @@ Insalltion:
 	(Sorry, SAM doesn't currently add shortcuts to the Kicker menu)
 
 2) On Windows Platform:
-	Contact the authors to get the windows installer. (It's free too)
+	Contact the authors to get the windows installer. (It's free too!)
 	Just run the setup.exe
 	SAM is ready to use by invoking from desktop shortcut or start-menu shortcut.
 
