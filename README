@@ -6,13 +6,14 @@ Insalltion:
 
 	Get the source code from http://bitbucket.org/viranch/sam or clone the repo:
 	$ hg clone http://bitbucket.org/viranch/sam
-	Note: if the above command doesn't work, you need to install the package mercurial,
+	Note: if the above command doesn't work, you need to install the package "mercurial",
 	otherwise get the code from the above link.
 
 	Run the following commands:
 
 	$ cd path/to/source
-	$ ./install.sh
+	$ python2 setup.py build
+	$ sudo python2 setup.py install
 
 	SAM is ready to use! Just issue following in terminal:
 	$ sam

@@ -10,8 +10,6 @@ import os
 import Cyberoam
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
-import bz2
-import thread
 import qrc_icon
 from base64 import *
 
@@ -38,7 +36,7 @@ if 'win' in sys.platform:
 		import ctypes
 		return ctypes.windll.kernel32.OpenProcess(1, 0, pid)!=0
 else:
-	lck_file = os.getenv('HOME')+'/.sam/'+lck_file
+	lck_file = os.getenv('HOME')+'/'+lck_file
 	def exists (pid):
 		try:
 			os.kill (pid, 0)
@@ -589,20 +587,25 @@ class QApplication(QApplication):
 	def commitData(self,manager):
 		os.remove(lck_file)
 
-def main():
+def _main():
 	app = QApplication (sys.argv)
 	window = MainWindow()
 	window.show()
 	window.loadPrefs()
-	app.exec_()
+	return app.exec_()
 
-if __name__=='__main__':
+def main():
 	if not os.access (lck_file, os.F_OK):
-		main()
+		return _main()
 	else:
 		pid = int ( open(lck_file, 'rb').read() )
 		if exists(pid):
 			app = QApplication (sys.argv)
 			QMessageBox.information (None, 'SAM', 'SAM is already running.')
 		else:
-			main()
+			return _main()
+
+if __name__=='__main__':
+	sys.stderr = sys.stdout
+
+	sys.exit (main())
