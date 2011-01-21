@@ -14,10 +14,10 @@ def do():
 		scripts=['scripts/sam'],
 	)
 
-import sys
+import sys, shutil
 
 sys.argv.append ('build')
 do()
 sys.argv[1] = 'install'
 do()
-
+shutil.rmtree('build')
