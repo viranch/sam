@@ -12,7 +12,7 @@ Insalltion:
 	Run the following commands:
 
 	$ cd path/to/source
-	$ su -c 'python2 setup.py'
+	$ su -c 'python setup.py'
 
 	SAM is ready to use! Just issue following in terminal:
 	$ sam
