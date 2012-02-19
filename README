@@ -4,14 +4,14 @@ Insalltion:
 1) On LINUX Platforms:
 	Make sure you have python and pyqt packages instlled before proceeding.
 
-	Get the source code from http://bitbucket.org/viranch/sam or clone the repo:
-	$ hg clone http://bitbucket.org/viranch/sam
-	Note: if the above command doesn't work, you need to install the package "mercurial",
+	Get the source code from http://github.com/viranch/sam or clone the repo:
+	$ hg clone http://github.com/viranch/sam
+	Note: if the above command doesn't work, you need to install the package "git",
 	otherwise get the code from the above link.
 
 	Run the following commands:
 
-	$ cd path/to/source
+	$ cd path/to/sam
 	$ su -c 'python setup.py'
 
 	SAM is ready to use! Just issue following in terminal:

@@ -3,7 +3,7 @@
 # Authors: 		Viranch Mehta <viranch.mehta@gmail.com>
 #			Mohit Kothari <mohitrajkothari@gmail.com>
 #
-# Source Website: 	http://www.bitbucket.org/viranch/sam
+# Source Website: 	http://www.github.com/viranch/sam
 
 import sys
 import os
